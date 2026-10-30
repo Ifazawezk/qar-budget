@@ -1,0 +1,20 @@
+{
+  "name": "qar-budget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monthly budget tracker in Qatari riyals, in English and Arabic",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "author": "Mohaned Elhagar",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}
