@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { newId, remove, restore, sortNewestFirst, upsert } from "./transactions";
+import {
+  mergeTransactions,
+  newId,
+  remove,
+  restore,
+  sortNewestFirst,
+  upsert,
+} from "./transactions";
 import type { Transaction } from "./types";
 
 function tx(id: string, date: string, amount = 1000): Transaction {
@@ -43,6 +50,46 @@ describe("upsert, remove and restore", () => {
     expect(removed.map((t) => t.id)).toEqual(["a", "c"]);
     expect(restore(removed, tx("b", "2026-10-02"), 1).map((t) => t.id)).toEqual(["a", "b", "c"]);
     expect(restore(removed, tx("b", "2026-10-02"), 99).map((t) => t.id)).toEqual(["a", "c", "b"]);
+  });
+});
+
+describe("mergeTransactions", () => {
+  const coffee = (id: string) => ({ ...tx(id, "2026-10-05", 1200), category: "dining" });
+
+  it("adds new entries and skips ones already saved", () => {
+    const saved = [tx("a", "2026-10-01"), tx("b", "2026-10-02")];
+    // CSV imports get fresh ids, so only the content can tell they are the same.
+    const incoming = [tx("x", "2026-10-02"), tx("y", "2026-10-03")];
+    const result = mergeTransactions(saved, incoming);
+    expect(result.transactions.map((t) => t.id)).toEqual(["a", "b", "y"]);
+    expect([result.added, result.updated, result.skipped]).toEqual([1, 0, 1]);
+  });
+
+  it("matches identical entries one to one", () => {
+    const result = mergeTransactions([coffee("a")], [coffee("x"), coffee("y")]);
+    expect(result.transactions.map((t) => t.id)).toEqual(["a", "y"]);
+    expect([result.added, result.skipped]).toEqual([1, 1]);
+  });
+
+  it("replaces entries with the same id when restoring a backup", () => {
+    const saved = [tx("a", "2026-10-01", 1000), tx("b", "2026-10-02")];
+    const backup = [tx("a", "2026-10-01", 2500), tx("b", "2026-10-02")];
+    const result = mergeTransactions(saved, backup);
+    expect(result.transactions.map((t) => t.amount)).toEqual([2500, 1000]);
+    expect([result.added, result.updated, result.skipped]).toEqual([0, 1, 1]);
+  });
+
+  it("lets an id match claim its own entry before content matching", () => {
+    // y comes first in the file but must not swallow a's saved twin.
+    const result = mergeTransactions([coffee("a")], [coffee("y"), coffee("a")]);
+    expect(result.transactions.map((t) => t.id)).toEqual(["a", "y"]);
+    expect([result.added, result.skipped]).toEqual([1, 1]);
+  });
+
+  it("keeps the first of two entries with the same id in one file", () => {
+    const result = mergeTransactions([], [tx("a", "2026-10-01"), tx("a", "2026-10-09")]);
+    expect(result.transactions.map((t) => t.date)).toEqual(["2026-10-01"]);
+    expect(result.skipped).toBe(1);
   });
 });
 

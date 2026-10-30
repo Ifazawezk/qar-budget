@@ -13,6 +13,10 @@ export interface Transaction {
   note: string;
 }
 
+/** Monthly spending limit per expense category id. Categories without a limit are absent. */
+export type Budgets = Record<string, Dirhams>;
+
 export interface AppData {
   transactions: Transaction[];
+  budgets: Budgets;
 }

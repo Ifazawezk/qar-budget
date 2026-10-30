@@ -1,9 +1,10 @@
 import { isValidDate } from "./dates";
-import type { AppData, Transaction } from "./types";
+import type { Lang } from "./i18n";
+import type { AppData, Budgets, Transaction } from "./types";
 
 export const STORAGE_KEY = "qar-budget:data";
 export const BACKUP_KEY = "qar-budget:backup";
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** The part of the Web Storage API used here, so tests can pass a simple fake. */
 export interface KeyValueStore {
@@ -24,14 +25,29 @@ type Doc = Record<string, unknown>;
  * Upgrades for older saved data: MIGRATIONS[n] turns a version n document
  * into version n + 1. Released steps must never change; add a new one instead.
  */
-const MIGRATIONS: Record<number, (doc: Doc) => Doc> = {};
+const MIGRATIONS: Record<number, (doc: Doc) => Doc> = {
+  // 1 -> 2: monthly budgets per category.
+  1: (doc) => ({ ...doc, version: 2, budgets: {} }),
+};
 
 function isRecord(value: unknown): value is Doc {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function emptyData(): AppData {
-  return { transactions: [] };
+  return { transactions: [], budgets: {} };
+}
+
+function readBudgets(raw: unknown): Budgets {
+  if (!isRecord(raw)) throw new DataError("Budgets are missing");
+  const entries = Object.entries(raw);
+  for (const [category, limit] of entries) {
+    if (typeof limit !== "number" || !Number.isSafeInteger(limit) || limit <= 0) {
+      throw new DataError(`Budget for "${category}" is invalid`);
+    }
+  }
+  // fromEntries defines plain own properties, so a "__proto__" key stays harmless.
+  return Object.fromEntries(entries) as Budgets;
 }
 
 function readTransaction(raw: unknown, index: number): Transaction {
@@ -56,7 +72,10 @@ function readTransaction(raw: unknown, index: number): Transaction {
 
 function validate(doc: Doc): AppData {
   if (!Array.isArray(doc.transactions)) throw new DataError("The list of entries is missing");
-  return { transactions: doc.transactions.map(readTransaction) };
+  return {
+    transactions: doc.transactions.map(readTransaction),
+    budgets: readBudgets(doc.budgets),
+  };
 }
 
 /** Check a saved or imported document and bring it up to the current schema. */
@@ -112,17 +131,21 @@ export type Theme = "auto" | "light" | "dark";
 
 export interface Settings {
   theme: Theme;
+  lang: Lang;
 }
 
-export function loadSettings(store: KeyValueStore): Settings {
+/** `fallbackLang` is used until the user picks a language, usually the browser's. */
+export function loadSettings(store: KeyValueStore, fallbackLang: Lang = "en"): Settings {
   let raw: unknown = null;
   try {
     raw = JSON.parse(store.getItem(SETTINGS_KEY) ?? "null");
   } catch {
     // Ignore and use defaults.
   }
-  const theme = isRecord(raw) && (raw.theme === "light" || raw.theme === "dark") ? raw.theme : "auto";
-  return { theme };
+  const saved = isRecord(raw) ? raw : {};
+  const theme = saved.theme === "light" || saved.theme === "dark" ? saved.theme : "auto";
+  const lang = saved.lang === "en" || saved.lang === "ar" ? saved.lang : fallbackLang;
+  return { theme, lang };
 }
 
 export function saveSettings(store: KeyValueStore, settings: Settings): void {

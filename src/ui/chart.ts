@@ -1,13 +1,10 @@
-import { categoryName } from "../lib/categories";
-import { formatPercent } from "../lib/format";
-import { formatQAR } from "../lib/money";
 import type { CategoryTotal } from "../lib/summary";
+import type { UiContext } from "./context";
 import { h, s } from "./dom";
 
 export interface ChartOptions {
+  ctx: UiContext;
   spending: readonly CategoryTotal[];
-  locale: string;
-  rtl: boolean;
   /** Caption for the screen reader table. */
   caption: string;
   headers: [category: string, amount: string, share: string];
@@ -50,23 +47,24 @@ function draw(host: HTMLElement, width: number, o: ChartOptions): void {
 
   // Measure the amount labels first so even the longest bar leaves room for its label.
   const values = o.spending.map((c) =>
-    s("text", { class: "chart-value", "dominant-baseline": "central" }, formatQAR(c.total, o.locale)),
+    s("text", { class: "chart-value", "dominant-baseline": "central" }, o.ctx.money(c.total)),
   );
   svg.append(...values);
   const widest = Math.max(0, ...values.map((text) => text.getComputedTextLength()));
   const room = Math.max(width - widest - GAP, 40);
   const largest = o.spending[0]?.total || 1;
 
-  const x = (offset: number) => (o.rtl ? width - offset : offset);
-  const startAnchor = o.rtl ? "end" : "start";
-  const endAnchor = o.rtl ? "start" : "end";
+  const { rtl } = o.ctx;
+  const x = (offset: number) => (rtl ? width - offset : offset);
+  const startAnchor = rtl ? "end" : "start";
+  const endAnchor = rtl ? "start" : "end";
 
   o.spending.forEach((c, i) => {
     const top = i * ROW;
     const length = Math.max(2, (c.total / largest) * room);
-    const name = categoryName(c.category);
-    const amount = formatQAR(c.total, o.locale);
-    const share = formatPercent(c.share, o.locale);
+    const name = o.ctx.category(c.category);
+    const amount = o.ctx.money(c.total);
+    const share = o.ctx.percent(c.share);
     const value = values[i];
     if (!value) return;
     value.setAttribute("x", String(x(length + GAP)));
@@ -81,7 +79,7 @@ function draw(host: HTMLElement, width: number, o: ChartOptions): void {
         s("rect", { class: "chart-hit", x: 0, y: top, width, height: ROW }),
         s("text", { class: "chart-label", x: x(0), y: top + LABEL_Y, "text-anchor": startAnchor }, name),
         s("text", { class: "chart-share", x: x(width), y: top + LABEL_Y, "text-anchor": endAnchor }, share),
-        s("path", { class: "chart-bar", d: barPath(x(0), length, top + BAR_Y, o.rtl) }),
+        s("path", { class: "chart-bar", d: barPath(x(0), length, top + BAR_Y, rtl) }),
         value,
       ),
     );
@@ -114,9 +112,9 @@ export function spendingChart(o: ChartOptions): HTMLElement {
         h(
           "tr",
           {},
-          h("th", { scope: "row" }, categoryName(c.category)),
-          h("td", {}, formatQAR(c.total, o.locale)),
-          h("td", {}, formatPercent(c.share, o.locale)),
+          h("th", { scope: "row" }, o.ctx.category(c.category)),
+          h("td", {}, o.ctx.money(c.total)),
+          h("td", {}, o.ctx.percent(c.share)),
         ),
       ),
     ),

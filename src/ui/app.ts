@@ -1,6 +1,8 @@
+import { budgetLines } from "../lib/budgets";
 import { currentMonth, monthOf, shiftMonth, today } from "../lib/dates";
+import { exportCSV, exportFileName, exportJSON, importFile } from "../lib/files";
 import { formatMonth } from "../lib/format";
-import { type Lang, localeFor, translator } from "../lib/i18n";
+import type { Lang } from "../lib/i18n";
 import {
   type KeyValueStore,
   load,
@@ -11,8 +13,11 @@ import {
 } from "../lib/storage";
 import { inMonth, summarize } from "../lib/summary";
 import { newId, remove, restore, sortNewestFirst, upsert } from "../lib/transactions";
-import type { AppData } from "../lib/types";
+import type { AppData, Budgets } from "../lib/types";
+import { budgetPanel } from "./budgets";
 import { spendingChart } from "./chart";
+import { type UiContext, uiContext } from "./context";
+import { dataPanel, download, type ImportReport } from "./data";
 import { h, icon } from "./dom";
 import { type EntryInput, entryForm } from "./form";
 import { entryList } from "./list";
@@ -28,14 +33,15 @@ function panel(title: string, body: Node, className: string): HTMLElement {
   return h("section", { class: `panel ${className}` }, h("h2", { class: "panel-title" }, title), body);
 }
 
-export function startApp(root: HTMLElement, store: KeyValueStore): void {
+export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: Lang): void {
   const loaded = load(store);
   let data: AppData = loaded.data;
-  let settings: Settings = loadSettings(store);
-  let editingId: string | null = null;
+  let settings: Settings = loadSettings(store, browserLang);
+  let ctx: UiContext = uiContext(settings.lang);
   let month = currentMonth();
-  const lang: Lang = "en";
-  const t = translator(lang);
+  let editingId: string | null = null;
+  let editingBudgets = false;
+  let report: ImportReport | null = null;
 
   const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
   darkQuery.addEventListener("change", () => {
@@ -53,7 +59,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
     notice = next;
     window.clearTimeout(toastTimer);
     if (next?.tone === "info") {
-      toastTimer = window.setTimeout(() => showNotice(null), next.action ? 8000 : 4000);
+      toastTimer = window.setTimeout(() => showNotice(null), next.action ? 8000 : 5000);
     }
     toastHost.replaceChildren(
       notice
@@ -65,7 +71,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
               h("button", { type: "button", class: "toast-action", onclick: notice.action.run }, notice.action.label),
             h(
               "button",
-              { type: "button", class: "icon-btn", "aria-label": t("dismiss"), onclick: () => showNotice(null) },
+              { type: "button", class: "icon-btn", "aria-label": ctx.t("dismiss"), onclick: () => showNotice(null) },
               icon("close"),
             ),
           )
@@ -80,7 +86,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
       save(store, data);
       return true;
     } catch {
-      showNotice({ tone: "error", text: t("saveFailed") });
+      showNotice({ tone: "error", text: ctx.t("saveFailed") });
       return false;
     }
   }
@@ -99,7 +105,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
     month = monthOf(tx.date);
     const saved = commit({ ...data, transactions: upsert(data.transactions, tx) });
     render();
-    if (saved) showNotice({ tone: "info", text: t(wasEditing ? "updated" : "added") });
+    if (saved) showNotice({ tone: "info", text: ctx.t(wasEditing ? "updated" : "added") });
     focusAmount();
   }
 
@@ -124,15 +130,54 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
     if (!saved) return;
     showNotice({
       tone: "info",
-      text: t("deleted"),
+      text: ctx.t("deleted"),
       action: {
-        label: t("undo"),
+        label: ctx.t("undo"),
         run: () => {
           if (commit({ ...data, transactions: restore(data.transactions, tx, index) })) showNotice(null);
           render();
         },
       },
     });
+  }
+
+  function saveBudgets(budgets: Budgets): void {
+    editingBudgets = false;
+    const saved = commit({ ...data, budgets });
+    render();
+    if (saved) showNotice({ tone: "info", text: ctx.t("budgetsSaved") });
+  }
+
+  function exportData(format: "json" | "csv"): void {
+    if (format === "json") {
+      download(exportFileName("json"), exportJSON(data), "application/json");
+    } else {
+      download(exportFileName("csv"), exportCSV(data), "text/csv;charset=utf-8");
+    }
+  }
+
+  async function importData(file: File): Promise<void> {
+    try {
+      const result = importFile(data, file.name, await file.text(), newId);
+      report = { fileName: file.name, issues: result.issues };
+      const saved = commit(result.data);
+      render();
+      if (saved) {
+        showNotice({
+          tone: "info",
+          text: ctx.t("importDone", {
+            added: ctx.count(result.added),
+            updated: ctx.count(result.updated),
+            skipped: ctx.count(result.skipped),
+          }),
+        });
+      }
+    } catch (error) {
+      report = null;
+      render();
+      const detail = error instanceof Error ? error.message : String(error);
+      showNotice({ tone: "error", text: ctx.t("importFailed", { file: file.name, detail }) });
+    }
   }
 
   function showMonth(next: string): void {
@@ -153,6 +198,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
 
   function updateSettings(next: Settings): void {
     settings = next;
+    ctx = uiContext(settings.lang);
     try {
       saveSettings(store, settings);
     } catch {
@@ -161,17 +207,26 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
     render();
   }
 
+  function toggleLang(): void {
+    // A notice in the old language would look out of place.
+    showNotice(null);
+    updateSettings({ ...settings, lang: settings.lang === "ar" ? "en" : "ar" });
+  }
+
   function render(): void {
+    const { t } = ctx;
     const html = document.documentElement;
+    html.lang = ctx.lang;
+    html.dir = ctx.rtl ? "rtl" : "ltr";
     if (settings.theme === "auto") html.removeAttribute("data-theme");
     else html.dataset.theme = settings.theme;
+    document.title = t("appTitle");
 
-    const locale = localeFor(lang);
     const editing = data.transactions.find((tx) => tx.id === editingId) ?? null;
     const themeLabel = isDark() ? t("themeToLight") : t("themeToDark");
     const summary = summarize(data.transactions, month);
     const previous = summarize(data.transactions, shiftMonth(month, -1));
-    const monthName = formatMonth(month, locale);
+    const monthName = formatMonth(month, ctx.locale);
 
     root.replaceChildren(
       h(
@@ -190,6 +245,17 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
             "button",
             {
               type: "button",
+              class: "btn btn-small lang-btn",
+              lang: ctx.lang === "ar" ? "en" : "ar",
+              "aria-label": t("switchLangLabel"),
+              onclick: toggleLang,
+            },
+            t("switchLang"),
+          ),
+          h(
+            "button",
+            {
+              type: "button",
               class: "icon-btn",
               title: themeLabel,
               "aria-label": themeLabel,
@@ -203,14 +269,13 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
         "main",
         { class: "layout" },
         monthNav({
-          t,
-          locale,
+          ctx,
           month,
           isCurrentMonth: month === currentMonth(),
           onShift: (delta) => showMonth(shiftMonth(month, delta)),
           onCurrent: () => showMonth(currentMonth()),
         }),
-        summaryCards({ t, locale, summary, previous }),
+        summaryCards({ ctx, summary, previous }),
         h(
           "div",
           { class: "columns" },
@@ -220,7 +285,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
             panel(
               editing ? t("editEntry") : t("addEntry"),
               entryForm({
-                t,
+                ctx,
                 editing,
                 defaultDate: defaultDate(),
                 onSubmit: submitEntry,
@@ -231,8 +296,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
             panel(
               t("entries"),
               entryList({
-                t,
-                locale,
+                ctx,
                 transactions: sortNewestFirst(inMonth(data.transactions, month)),
                 editingId,
                 emptyText:
@@ -252,14 +316,38 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
               t("spending"),
               summary.spending.length > 0
                 ? spendingChart({
+                    ctx,
                     spending: summary.spending,
-                    locale,
-                    rtl: false,
                     caption: `${t("spending")}, ${monthName}`,
                     headers: [t("category"), t("amount"), t("share")],
                   })
                 : h("p", { class: "empty" }, t("noSpending", { month: monthName })),
               "panel-chart",
+            ),
+            panel(
+              t("budgets"),
+              budgetPanel({
+                ctx,
+                lines: budgetLines(data.budgets, summary),
+                budgets: data.budgets,
+                editing: editingBudgets,
+                onEdit: () => {
+                  editingBudgets = true;
+                  render();
+                  root.querySelector<HTMLInputElement>(".budget-form input")?.focus();
+                },
+                onCancel: () => {
+                  editingBudgets = false;
+                  render();
+                },
+                onSave: saveBudgets,
+              }),
+              "panel-budgets",
+            ),
+            panel(
+              t("files"),
+              dataPanel({ ctx, report, onExport: exportData, onImport: (file) => void importData(file) }),
+              "panel-data",
             ),
           ),
         ),
@@ -270,6 +358,6 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
 
   render();
   if (loaded.problem) {
-    showNotice({ tone: "error", text: t("loadProblem", { detail: loaded.problem }) });
+    showNotice({ tone: "error", text: ctx.t("loadProblem", { detail: loaded.problem }) });
   }
 }

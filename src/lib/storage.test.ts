@@ -29,11 +29,15 @@ const sample: AppData = {
     { id: "a", kind: "income", amount: 1500000, category: "salary", date: "2026-10-01", note: "" },
     { id: "b", kind: "expense", amount: 4550, category: "groceries", date: "2026-10-03", note: "Lulu" },
   ],
+  budgets: { groceries: 150000 },
 };
 
 describe("load and save", () => {
   it("starts empty when nothing is saved", () => {
-    expect(load(new MemoryStore())).toEqual({ data: { transactions: [] }, problem: null });
+    expect(load(new MemoryStore())).toEqual({
+      data: { transactions: [], budgets: {} },
+      problem: null,
+    });
   });
 
   it("round-trips data with the schema version", () => {
@@ -56,21 +60,42 @@ describe("load and save", () => {
 describe("settings", () => {
   it("falls back to defaults for missing or unknown values", () => {
     const store = new MemoryStore();
-    expect(loadSettings(store)).toEqual({ theme: "auto" });
-    store.setItem(SETTINGS_KEY, '{"theme":"purple"}');
-    expect(loadSettings(store)).toEqual({ theme: "auto" });
+    expect(loadSettings(store)).toEqual({ theme: "auto", lang: "en" });
+    store.setItem(SETTINGS_KEY, '{"theme":"purple","lang":"fr"}');
+    expect(loadSettings(store)).toEqual({ theme: "auto", lang: "en" });
     store.setItem(SETTINGS_KEY, "oops");
-    expect(loadSettings(store)).toEqual({ theme: "auto" });
+    expect(loadSettings(store, "ar")).toEqual({ theme: "auto", lang: "ar" });
   });
 
-  it("saves and loads the theme", () => {
+  it("prefers the saved language over the browser language", () => {
     const store = new MemoryStore();
-    saveSettings(store, { theme: "dark" });
-    expect(loadSettings(store)).toEqual({ theme: "dark" });
+    saveSettings(store, { theme: "dark", lang: "en" });
+    expect(loadSettings(store, "ar")).toEqual({ theme: "dark", lang: "en" });
   });
 });
 
 describe("migrate", () => {
+  it("upgrades version 1 data, which had no budgets", () => {
+    const v1 = { version: 1, transactions: sample.transactions };
+    expect(migrate(v1)).toEqual({ transactions: sample.transactions, budgets: {} });
+  });
+
+  it("checks budgets", () => {
+    expect(() => migrate({ version: 2, transactions: [] })).toThrow(/Budgets/);
+    expect(() => migrate({ version: 2, transactions: [], budgets: { dining: -5 } })).toThrow(
+      /dining/,
+    );
+    expect(() => migrate({ version: 2, transactions: [], budgets: { dining: 10.5 } })).toThrow(
+      DataError,
+    );
+  });
+
+  it("keeps a __proto__ key as plain data", () => {
+    const data = migrate(JSON.parse('{"version":2,"transactions":[],"budgets":{"__proto__":100}}'));
+    expect(Object.getPrototypeOf(data.budgets)).toBe(Object.prototype);
+    expect(Object.keys(data.budgets)).toEqual(["__proto__"]);
+  });
+
   it("rejects documents that are not app data", () => {
     expect(() => migrate(null)).toThrow(DataError);
     expect(() => migrate([])).toThrow(DataError);

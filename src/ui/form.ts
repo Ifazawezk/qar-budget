@@ -1,14 +1,14 @@
-import { categoriesFor, categoryName } from "../lib/categories";
+import { categoriesFor } from "../lib/categories";
 import { isValidDate } from "../lib/dates";
-import type { Translate } from "../lib/i18n";
 import { parseAmount, toDecimal } from "../lib/money";
 import type { Kind, Transaction } from "../lib/types";
+import type { UiContext } from "./context";
 import { h } from "./dom";
 
 export type EntryInput = Omit<Transaction, "id">;
 
 export interface FormOptions {
-  t: Translate;
+  ctx: UiContext;
   editing: Transaction | null;
   defaultDate: string;
   onSubmit: (entry: EntryInput) => void;
@@ -19,7 +19,8 @@ function field(label: string, control: HTMLElement): HTMLElement {
   return h("label", { class: "field" }, h("span", { class: "field-label" }, label), control);
 }
 
-export function entryForm({ t, editing, defaultDate, onSubmit, onCancel }: FormOptions): HTMLElement {
+export function entryForm({ ctx, editing, defaultDate, onSubmit, onCancel }: FormOptions): HTMLElement {
+  const { t } = ctx;
   let kind: Kind = editing?.kind ?? "expense";
 
   const amount = h("input", {
@@ -50,7 +51,7 @@ export function entryForm({ t, editing, defaultDate, onSubmit, onCancel }: FormO
   const error = h("p", { class: "form-error", id: "entry-error", hidden: true });
 
   function fillCategories(selected?: string): void {
-    const options = categoriesFor(kind).map((c) => ({ id: c.id, label: categoryName(c.id) }));
+    const options = categoriesFor(kind).map((c) => ({ id: c.id, label: ctx.category(c.id) }));
     // An imported entry may use a category this version does not know. Keep it selectable.
     if (selected && !options.some((o) => o.id === selected)) {
       options.push({ id: selected, label: selected });

@@ -46,6 +46,9 @@ const ICONS = {
   // Drawn for left-to-right; the stylesheet mirrors them in Arabic.
   back: "M15 6l-6 6 6 6",
   forward: "M9 6l6 6-6 6",
+  warning: "M12 3.5L2.5 20h19L12 3.5zM12 10v4.5M12 17.5v.01",
+  download: "M12 4v11M7 10l5 5 5-5M5 20h14",
+  upload: "M12 15V4M7 9l5-5 5 5M5 20h14",
 };
 
 export type IconName = keyof typeof ICONS;

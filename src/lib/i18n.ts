@@ -1,5 +1,7 @@
 const en = {
   appTitle: "QAR Budget",
+  switchLang: "العربية",
+  switchLangLabel: "Switch to Arabic",
   themeToDark: "Switch to dark mode",
   themeToLight: "Switch to light mode",
   addEntry: "Add entry",
@@ -18,8 +20,20 @@ const en = {
   amountInvalid: "Enter an amount above zero, with at most two decimals.",
   dateInvalid: "Pick a valid date.",
   entries: "Entries",
-  noEntries: "Nothing recorded yet. Add your first income or expense above.",
+  noEntries: "Nothing recorded yet. Add your first income or expense with the form.",
   noEntriesMonth: "No entries in {month}.",
+  edit: "Edit",
+  delete: "Delete",
+  editLabel: "Edit {name}",
+  deleteLabel: "Delete {name}",
+  added: "Entry added.",
+  updated: "Changes saved.",
+  deleted: "Entry deleted.",
+  undo: "Undo",
+  dismiss: "Dismiss",
+  saveFailed: "Could not save in this browser. Export your data to keep a copy.",
+  loadProblem: "Saved data could not be read ({detail}). A backup copy was kept in this browser.",
+  privacy: "Your data stays in this browser. Nothing is uploaded.",
   month: "Month",
   previousMonth: "Previous month",
   nextMonth: "Next month",
@@ -36,25 +50,126 @@ const en = {
   spending: "Spending by category",
   noSpending: "No spending recorded in {month}.",
   share: "Share",
-  edit: "Edit",
-  delete: "Delete",
-  editLabel: "Edit {name}",
-  deleteLabel: "Delete {name}",
-  added: "Entry added.",
-  updated: "Changes saved.",
-  deleted: "Entry deleted.",
-  undo: "Undo",
-  dismiss: "Dismiss",
-  saveFailed: "Could not save in this browser. Export your data to keep a copy.",
-  loadProblem: "Saved data could not be read ({detail}). A backup copy was kept in this browser.",
-  privacy: "Your data stays in this browser. Nothing is uploaded.",
+  budgets: "Monthly budgets",
+  setBudgets: "Set budgets",
+  noBudgets: "No budgets yet. Set a monthly limit for the categories you want to keep an eye on.",
+  budgetHint: "Leave a category empty for no limit. Limits apply to every month.",
+  noLimit: "No limit",
+  saveBudgets: "Save budgets",
+  budgetsSaved: "Budgets saved.",
+  budgetInvalid: "Check the amount for {name}.",
+  spentOf: "{spent} of {limit}",
+  left: "{amount} left",
+  nearLimit: "{percent} used, {amount} left",
+  overBy: "Over by {amount}",
+  overWarning: "Over budget this month: {names}.",
+  allBudgets: "All budgets",
+  files: "Backup and files",
+  filesHelp:
+    "Export a JSON backup to move your data to another device, or CSV to open it in a spreadsheet. Importing adds new entries and skips the ones you already have.",
+  exportJson: "Export JSON",
+  exportCsv: "Export CSV",
+  importFile: "Import file",
+  importDone: "Imported: {added} new, {updated} updated, {skipped} already saved.",
+  importFailed: "Could not import {file}: {detail}",
+  importIssues: "Some rows were skipped:",
+  importIssue: "Line {line}: check the {field}.",
+  moreIssues: "And {count} more.",
+  fieldDate: "date",
+  fieldType: "type",
+  fieldCategory: "category",
+  fieldAmount: "amount",
 };
 
 export type MessageKey = keyof typeof en;
-export type Lang = "en";
+export type Lang = "en" | "ar";
 export type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string;
 
-const messages: Record<Lang, Record<MessageKey, string>> = { en };
+// Typed against the English keys, so a missing translation is a compile error.
+const ar: Record<MessageKey, string> = {
+  appTitle: "ميزانيتي",
+  switchLang: "English",
+  switchLangLabel: "التبديل إلى الإنجليزية",
+  themeToDark: "التبديل إلى الوضع الداكن",
+  themeToLight: "التبديل إلى الوضع الفاتح",
+  addEntry: "إضافة معاملة",
+  editEntry: "تعديل المعاملة",
+  kind: "النوع",
+  expense: "مصروف",
+  income: "دخل",
+  amount: "المبلغ (ر.ق)",
+  category: "الفئة",
+  date: "التاريخ",
+  note: "ملاحظة",
+  notePlaceholder: "اختياري، مثل مشتريات الأسبوع",
+  add: "إضافة",
+  saveChanges: "حفظ التعديلات",
+  cancel: "إلغاء",
+  amountInvalid: "أدخل مبلغًا أكبر من صفر، بخانتين عشريتين على الأكثر.",
+  dateInvalid: "اختر تاريخًا صحيحًا.",
+  entries: "المعاملات",
+  noEntries: "لا توجد معاملات بعد. أضف أول دخل أو مصروف من النموذج.",
+  noEntriesMonth: "لا توجد معاملات في {month}.",
+  edit: "تعديل",
+  delete: "حذف",
+  editLabel: "تعديل {name}",
+  deleteLabel: "حذف {name}",
+  added: "تمت إضافة المعاملة.",
+  updated: "تم حفظ التعديلات.",
+  deleted: "تم حذف المعاملة.",
+  undo: "تراجع",
+  dismiss: "إغلاق",
+  saveFailed: "تعذّر الحفظ في هذا المتصفح. صدّر بياناتك للاحتفاظ بنسخة منها.",
+  loadProblem: "تعذّرت قراءة البيانات المحفوظة ({detail}). تم الاحتفاظ بنسخة احتياطية في هذا المتصفح.",
+  privacy: "بياناتك تبقى في هذا المتصفح ولا يُرفع منها شيء.",
+  month: "الشهر",
+  previousMonth: "الشهر السابق",
+  nextMonth: "الشهر التالي",
+  thisMonth: "الشهر الحالي",
+  summary: "ملخص الشهر",
+  balance: "الرصيد",
+  incomeTotal: "الدخل",
+  expenseTotal: "المصروف",
+  moreThan: "أكثر من {month} بنسبة {percent}",
+  lessThan: "أقل من {month} بنسبة {percent}",
+  sameAs: "مثل {month}",
+  kept: "تبقّى {percent} من الدخل",
+  overspent: "المصروف أكبر من الدخل",
+  spending: "المصروف حسب الفئة",
+  noSpending: "لا يوجد مصروف مسجّل في {month}.",
+  share: "النسبة",
+  budgets: "الميزانية الشهرية",
+  setBudgets: "تحديد الميزانيات",
+  noBudgets: "لا توجد ميزانيات بعد. حدّد حدًا شهريًا للفئات التي تريد متابعتها.",
+  budgetHint: "اترك الفئة فارغة إذا لم ترد حدًا لها. الحدود تنطبق على كل شهر.",
+  noLimit: "بلا حد",
+  saveBudgets: "حفظ الميزانيات",
+  budgetsSaved: "تم حفظ الميزانيات.",
+  budgetInvalid: "تحقق من مبلغ {name}.",
+  spentOf: "{spent} من {limit}",
+  left: "متبقٍ {amount}",
+  nearLimit: "استُخدم {percent}، متبقٍ {amount}",
+  overBy: "تجاوز الحد بمقدار {amount}",
+  overWarning: "تجاوزت الميزانية هذا الشهر: {names}.",
+  allBudgets: "كل الميزانيات",
+  files: "النسخ الاحتياطي والملفات",
+  filesHelp:
+    "صدّر نسخة JSON لنقل بياناتك إلى جهاز آخر، أو ملف CSV لفتحه في جدول بيانات. الاستيراد يضيف المعاملات الجديدة ويتجاهل الموجودة مسبقًا.",
+  exportJson: "تصدير JSON",
+  exportCsv: "تصدير CSV",
+  importFile: "استيراد ملف",
+  importDone: "تم الاستيراد: {added} جديدة، {updated} معدّلة، {skipped} محفوظة مسبقًا.",
+  importFailed: "تعذّر استيراد {file}: {detail}",
+  importIssues: "تم تجاهل بعض الأسطر:",
+  importIssue: "السطر {line}: تحقق من {field}.",
+  moreIssues: "و{count} أخرى.",
+  fieldDate: "التاريخ",
+  fieldType: "النوع",
+  fieldCategory: "الفئة",
+  fieldAmount: "المبلغ",
+};
+
+const messages: Record<Lang, Record<MessageKey, string>> = { en, ar };
 
 export function translator(lang: Lang): Translate {
   const table = messages[lang];
@@ -65,5 +180,14 @@ export function translator(lang: Lang): Translate {
 }
 
 export function localeFor(lang: Lang): string {
-  return lang === "en" ? "en-QA" : lang;
+  return lang === "ar" ? "ar-QA" : "en-QA";
+}
+
+export function isRtl(lang: Lang): boolean {
+  return lang === "ar";
+}
+
+/** First visit: Arabic if the browser prefers it, otherwise English. */
+export function preferredLang(languages: readonly string[]): Lang {
+  return languages[0]?.toLowerCase().startsWith("ar") ? "ar" : "en";
 }

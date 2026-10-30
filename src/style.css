@@ -12,6 +12,10 @@
   --on-accent: #ffffff;
   --income: #12733f;
   --danger: #b3261e;
+  --danger-soft: #fbe4e2;
+  --warning: #8f5400;
+  --warning-fill: #e5a01c;
+  --warning-soft: #fbefd5;
   --focus: #2a6fdb;
   --shadow: 0 1px 2px rgb(28 27 26 / 0.05), 0 2px 8px rgb(28 27 26 / 0.04);
   --radius: 16px;
@@ -36,6 +40,10 @@
     --on-accent: #1b1c1f;
     --income: #52c98a;
     --danger: #ff8a80;
+    --danger-soft: #3b1d1b;
+    --warning: #f0b44c;
+    --warning-fill: #e5a01c;
+    --warning-soft: #3a2e14;
     --focus: #7fb0ff;
     --shadow: none;
   }
@@ -55,6 +63,10 @@
   --on-accent: #1b1c1f;
   --income: #52c98a;
   --danger: #ff8a80;
+  --danger-soft: #3b1d1b;
+  --warning: #f0b44c;
+  --warning-fill: #e5a01c;
+  --warning-soft: #3a2e14;
   --focus: #7fb0ff;
   --shadow: none;
 }
@@ -76,6 +88,11 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 16px/1.5 var(--font);
+}
+
+/* Arabic script needs a little more room between lines. */
+[lang="ar"] body {
+  line-height: 1.65;
 }
 
 button,
@@ -190,6 +207,10 @@ button {
   color: var(--text);
 }
 
+.lang-btn {
+  min-height: 40px;
+}
+
 /* Layout */
 
 .layout {
@@ -215,8 +236,16 @@ button {
   order: 2;
 }
 
+.panel-budgets {
+  order: 3;
+}
+
 .panel-list {
   order: 4;
+}
+
+.panel-data {
+  order: 5;
 }
 
 @media (min-width: 880px) {
@@ -566,8 +595,15 @@ input[name="amount"] {
   overflow: hidden;
   color: var(--text-muted);
   font-size: 0.875rem;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Notes use dir="auto" so mixed scripts read correctly, but they should line up
+   with the row, not with their own script. */
+[dir="rtl"] .entry-note {
+  text-align: right;
 }
 
 .entry-amount {
@@ -647,6 +683,204 @@ input[name="amount"] {
   color: inherit;
   font-weight: 700;
   text-decoration: underline;
+}
+
+/* Budgets */
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.budgets {
+  display: grid;
+  gap: 14px;
+}
+
+.budgets > .btn {
+  justify-self: start;
+}
+
+.budget-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.budget-warning .icon {
+  margin-top: 2px;
+}
+
+.budget-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budget {
+  display: grid;
+  gap: 6px;
+}
+
+.budget-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.budget-name {
+  font-weight: 500;
+}
+
+.budget-amounts {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The fill carries the state; the track is a lighter step of the same color. */
+.meter {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--accent-soft);
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.budget-near .meter {
+  background: var(--warning-soft);
+}
+
+.budget-near .meter-fill {
+  background: var(--warning-fill);
+}
+
+.budget-over .meter {
+  background: var(--danger-soft);
+}
+
+.budget-over .meter-fill {
+  background: var(--danger);
+}
+
+.budget-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.budget-status .icon,
+.import-issues .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.budget-near .budget-status {
+  color: var(--warning);
+}
+
+.budget-over .budget-status {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.budget-total {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.budget-form {
+  display: grid;
+  gap: 12px;
+}
+
+.budget-inputs {
+  display: grid;
+  gap: 8px;
+}
+
+.budget-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 9rem;
+  align-items: center;
+  gap: 12px;
+}
+
+.budget-input input {
+  min-height: 40px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* Backup and files */
+
+.data {
+  display: grid;
+  gap: 12px;
+}
+
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.data-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.data-actions .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.import-issues {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  font-size: 0.9rem;
+}
+
+.import-issues p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.import-issues ul {
+  margin: 0;
+  padding-inline-start: 20px;
 }
 
 @media (max-width: 380px) {

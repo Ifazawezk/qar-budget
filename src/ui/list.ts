@@ -1,13 +1,11 @@
-import { categoryName } from "../lib/categories";
 import { parseLocalDate } from "../lib/dates";
-import type { Translate } from "../lib/i18n";
 import { formatSigned } from "../lib/money";
 import type { Transaction } from "../lib/types";
+import type { UiContext } from "./context";
 import { h, icon } from "./dom";
 
 export interface ListOptions {
-  t: Translate;
-  locale: string;
+  ctx: UiContext;
   /** Already filtered and sorted newest first. */
   transactions: readonly Transaction[];
   editingId: string | null;
@@ -17,8 +15,9 @@ export interface ListOptions {
 }
 
 function entryRow(tx: Transaction, o: ListOptions): HTMLElement {
-  const name = categoryName(tx.category);
-  const signed = formatSigned(tx.kind === "income" ? tx.amount : -tx.amount, o.locale);
+  const { t } = o.ctx;
+  const name = o.ctx.category(tx.category);
+  const signed = formatSigned(tx.kind === "income" ? tx.amount : -tx.amount, o.ctx.locale);
   const label = `${name}, ${signed}`;
   return h(
     "li",
@@ -38,8 +37,8 @@ function entryRow(tx: Transaction, o: ListOptions): HTMLElement {
         {
           type: "button",
           class: "icon-btn",
-          title: o.t("edit"),
-          "aria-label": o.t("editLabel", { name: label }),
+          title: t("edit"),
+          "aria-label": t("editLabel", { name: label }),
           onclick: () => o.onEdit(tx.id),
         },
         icon("edit"),
@@ -49,8 +48,8 @@ function entryRow(tx: Transaction, o: ListOptions): HTMLElement {
         {
           type: "button",
           class: "icon-btn danger",
-          title: o.t("delete"),
-          "aria-label": o.t("deleteLabel", { name: label }),
+          title: t("delete"),
+          "aria-label": t("deleteLabel", { name: label }),
           onclick: () => o.onDelete(tx.id),
         },
         icon("trash"),
@@ -69,7 +68,7 @@ export function entryList(o: ListOptions): HTMLElement {
     else groups.push({ date: tx.date, items: [tx] });
   }
 
-  const dayFormat = new Intl.DateTimeFormat(o.locale, {
+  const dayFormat = new Intl.DateTimeFormat(o.ctx.locale, {
     weekday: "short",
     day: "numeric",
     month: "short",

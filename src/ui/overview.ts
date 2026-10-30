@@ -1,47 +1,46 @@
-import { formatMonth, formatPercent } from "../lib/format";
-import type { Translate } from "../lib/i18n";
-import { formatQAR } from "../lib/money";
+import { formatMonth } from "../lib/format";
 import { type MonthSummary, percentChange, savingsRate } from "../lib/summary";
+import type { UiContext } from "./context";
 import { h, icon } from "./dom";
 
 export interface MonthNavOptions {
-  t: Translate;
-  locale: string;
+  ctx: UiContext;
   month: string;
   isCurrentMonth: boolean;
   onShift: (delta: number) => void;
   onCurrent: () => void;
 }
 
-export function monthNav(o: MonthNavOptions): HTMLElement {
+export function monthNav({ ctx, month, isCurrentMonth, onShift, onCurrent }: MonthNavOptions): HTMLElement {
+  const { t } = ctx;
   return h(
     "nav",
-    { class: "month-nav", "aria-label": o.t("month") },
+    { class: "month-nav", "aria-label": t("month") },
     h(
       "button",
       {
         type: "button",
         class: "icon-btn",
-        title: o.t("previousMonth"),
-        "aria-label": o.t("previousMonth"),
-        onclick: () => o.onShift(-1),
+        title: t("previousMonth"),
+        "aria-label": t("previousMonth"),
+        onclick: () => onShift(-1),
       },
       icon("back"),
     ),
-    h("h2", { class: "month-label", "aria-live": "polite" }, formatMonth(o.month, o.locale)),
+    h("h2", { class: "month-label", "aria-live": "polite" }, formatMonth(month, ctx.locale)),
     h(
       "button",
       {
         type: "button",
         class: "icon-btn",
-        title: o.t("nextMonth"),
-        "aria-label": o.t("nextMonth"),
-        onclick: () => o.onShift(1),
+        title: t("nextMonth"),
+        "aria-label": t("nextMonth"),
+        onclick: () => onShift(1),
       },
       icon("forward"),
     ),
-    !o.isCurrentMonth &&
-      h("button", { type: "button", class: "btn btn-small", onclick: o.onCurrent }, o.t("thisMonth")),
+    !isCurrentMonth &&
+      h("button", { type: "button", class: "btn btn-small", onclick: onCurrent }, t("thisMonth")),
   );
 }
 
@@ -56,14 +55,14 @@ function card(label: string, value: string, note: string | null, className: stri
 }
 
 export interface CardsOptions {
-  t: Translate;
-  locale: string;
+  ctx: UiContext;
   summary: MonthSummary;
   previous: MonthSummary;
 }
 
-export function summaryCards({ t, locale, summary, previous }: CardsOptions): HTMLElement {
-  const previousName = formatMonth(previous.month, locale, false);
+export function summaryCards({ ctx, summary, previous }: CardsOptions): HTMLElement {
+  const { t } = ctx;
+  const previousName = formatMonth(previous.month, ctx.locale, false);
   const change = percentChange(summary.expense, previous.expense);
   let spendingNote: string | null = null;
   if (change !== null && summary.expense > 0) {
@@ -71,7 +70,7 @@ export function summaryCards({ t, locale, summary, previous }: CardsOptions): HT
       Math.abs(change) < 0.005
         ? t("sameAs", { month: previousName })
         : t(change > 0 ? "moreThan" : "lessThan", {
-            percent: formatPercent(Math.abs(change), locale),
+            percent: ctx.percent(Math.abs(change)),
             month: previousName,
           });
   }
@@ -79,7 +78,7 @@ export function summaryCards({ t, locale, summary, previous }: CardsOptions): HT
   const rate = savingsRate(summary);
   let balanceNote: string | null = null;
   if (rate !== null) {
-    balanceNote = rate < 0 ? t("overspent") : t("kept", { percent: formatPercent(rate, locale) });
+    balanceNote = rate < 0 ? t("overspent") : t("kept", { percent: ctx.percent(rate) });
   }
 
   return h(
@@ -87,11 +86,11 @@ export function summaryCards({ t, locale, summary, previous }: CardsOptions): HT
     { class: "cards", "aria-label": t("summary") },
     card(
       t("balance"),
-      formatQAR(summary.balance, locale),
+      ctx.money(summary.balance),
       balanceNote,
       summary.balance < 0 ? "card-balance negative" : "card-balance",
     ),
-    card(t("incomeTotal"), formatQAR(summary.income, locale), null, "card-income"),
-    card(t("expenseTotal"), formatQAR(summary.expense, locale), spendingNote, "card-expense"),
+    card(t("incomeTotal"), ctx.money(summary.income), null, "card-income"),
+    card(t("expenseTotal"), ctx.money(summary.expense), spendingNote, "card-expense"),
   );
 }
