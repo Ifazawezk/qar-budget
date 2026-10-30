@@ -111,6 +111,11 @@ button {
   flex: none;
 }
 
+[dir="rtl"] .icon-back,
+[dir="rtl"] .icon-forward {
+  transform: scaleX(-1);
+}
+
 #app {
   max-width: 1120px;
   margin: 0 auto;
@@ -190,8 +195,159 @@ button {
 .layout {
   display: grid;
   gap: 16px;
-  max-width: 720px;
-  margin: 0 auto;
+}
+
+.columns {
+  display: grid;
+  gap: 16px;
+}
+
+/* On a phone both columns melt into one list, with the chart right after the form. */
+.column {
+  display: contents;
+}
+
+.panel-form {
+  order: 1;
+}
+
+.panel-chart {
+  order: 2;
+}
+
+.panel-list {
+  order: 4;
+}
+
+@media (min-width: 880px) {
+  .columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .column {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+  }
+}
+
+/* Month switcher and totals */
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.month-label {
+  min-width: 9.5em;
+  margin: 0;
+  font-size: 1.3rem;
+  text-align: center;
+}
+
+.month-nav .btn-small {
+  margin-inline-start: auto;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.card-balance {
+  grid-column: 1 / -1;
+}
+
+.card-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.card-value {
+  font-size: 1.2rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.card-balance .card-value {
+  font-size: 2rem;
+  line-height: 1.25;
+}
+
+.card-balance.negative .card-value {
+  color: var(--danger);
+}
+
+.card-note {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+@media (min-width: 880px) {
+  .cards {
+    grid-template-columns: 1.4fr 1fr 1fr;
+  }
+
+  .card-balance {
+    grid-column: auto;
+  }
+}
+
+/* Chart */
+
+.chart-figure {
+  margin: 0;
+}
+
+.chart-svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart-label {
+  fill: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.chart-share,
+.chart-value {
+  fill: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-value {
+  fill: var(--text);
+}
+
+.chart-bar {
+  fill: var(--accent);
+}
+
+.chart-hit {
+  fill: transparent;
+}
+
+.chart-row:hover .chart-hit {
+  fill: var(--surface-sunken);
 }
 
 .panel {
@@ -227,6 +383,12 @@ button {
 
 .btn:hover {
   background: var(--surface-sunken);
+}
+
+.btn-small {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 0.9rem;
 }
 
 .btn-primary {

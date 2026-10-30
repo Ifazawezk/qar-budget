@@ -43,6 +43,9 @@ const ICONS = {
   sun: "M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4",
   moon: "M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z",
   close: "M6 6l12 12M18 6L6 18",
+  // Drawn for left-to-right; the stylesheet mirrors them in Arabic.
+  back: "M15 6l-6 6 6 6",
+  forward: "M9 6l6 6-6 6",
 };
 
 export type IconName = keyof typeof ICONS;

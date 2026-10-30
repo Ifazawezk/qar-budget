@@ -1,4 +1,5 @@
-import { today } from "../lib/dates";
+import { currentMonth, monthOf, shiftMonth, today } from "../lib/dates";
+import { formatMonth } from "../lib/format";
 import { type Lang, localeFor, translator } from "../lib/i18n";
 import {
   type KeyValueStore,
@@ -8,11 +9,14 @@ import {
   saveSettings,
   type Settings,
 } from "../lib/storage";
+import { inMonth, summarize } from "../lib/summary";
 import { newId, remove, restore, sortNewestFirst, upsert } from "../lib/transactions";
 import type { AppData } from "../lib/types";
+import { spendingChart } from "./chart";
 import { h, icon } from "./dom";
 import { type EntryInput, entryForm } from "./form";
 import { entryList } from "./list";
+import { monthNav, summaryCards } from "./overview";
 
 interface Notice {
   tone: "info" | "error";
@@ -29,6 +33,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
   let data: AppData = loaded.data;
   let settings: Settings = loadSettings(store);
   let editingId: string | null = null;
+  let month = currentMonth();
   const lang: Lang = "en";
   const t = translator(lang);
 
@@ -90,6 +95,8 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
     const wasEditing = editingId !== null;
     const tx = { id: editingId ?? newId(), ...entry };
     editingId = null;
+    // Show the month the entry landed in, so it never seems to disappear.
+    month = monthOf(tx.date);
     const saved = commit({ ...data, transactions: upsert(data.transactions, tx) });
     render();
     if (saved) showNotice({ tone: "info", text: t(wasEditing ? "updated" : "added") });
@@ -128,6 +135,18 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
     });
   }
 
+  function showMonth(next: string): void {
+    month = next;
+    editingId = null;
+    render();
+  }
+
+  /** Today when looking at the current month, otherwise the first day of the month on screen. */
+  function defaultDate(): string {
+    const now = today();
+    return monthOf(now) === month ? now : `${month}-01`;
+  }
+
   function isDark(): boolean {
     return settings.theme === "dark" || (settings.theme === "auto" && darkQuery.matches);
   }
@@ -150,6 +169,9 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
     const locale = localeFor(lang);
     const editing = data.transactions.find((tx) => tx.id === editingId) ?? null;
     const themeLabel = isDark() ? t("themeToLight") : t("themeToDark");
+    const summary = summarize(data.transactions, month);
+    const previous = summarize(data.transactions, shiftMonth(month, -1));
+    const monthName = formatMonth(month, locale);
 
     root.replaceChildren(
       h(
@@ -180,29 +202,66 @@ export function startApp(root: HTMLElement, store: KeyValueStore): void {
       h(
         "main",
         { class: "layout" },
-        panel(
-          editing ? t("editEntry") : t("addEntry"),
-          entryForm({
-            t,
-            editing,
-            defaultDate: today(),
-            onSubmit: submitEntry,
-            onCancel: cancelEdit,
-          }),
-          "panel-form",
-        ),
-        panel(
-          t("entries"),
-          entryList({
-            t,
-            locale,
-            transactions: sortNewestFirst(data.transactions),
-            editingId,
-            emptyText: t("noEntries"),
-            onEdit: startEdit,
-            onDelete: deleteEntry,
-          }),
-          "panel-list",
+        monthNav({
+          t,
+          locale,
+          month,
+          isCurrentMonth: month === currentMonth(),
+          onShift: (delta) => showMonth(shiftMonth(month, delta)),
+          onCurrent: () => showMonth(currentMonth()),
+        }),
+        summaryCards({ t, locale, summary, previous }),
+        h(
+          "div",
+          { class: "columns" },
+          h(
+            "div",
+            { class: "column" },
+            panel(
+              editing ? t("editEntry") : t("addEntry"),
+              entryForm({
+                t,
+                editing,
+                defaultDate: defaultDate(),
+                onSubmit: submitEntry,
+                onCancel: cancelEdit,
+              }),
+              "panel-form",
+            ),
+            panel(
+              t("entries"),
+              entryList({
+                t,
+                locale,
+                transactions: sortNewestFirst(inMonth(data.transactions, month)),
+                editingId,
+                emptyText:
+                  data.transactions.length === 0
+                    ? t("noEntries")
+                    : t("noEntriesMonth", { month: monthName }),
+                onEdit: startEdit,
+                onDelete: deleteEntry,
+              }),
+              "panel-list",
+            ),
+          ),
+          h(
+            "div",
+            { class: "column" },
+            panel(
+              t("spending"),
+              summary.spending.length > 0
+                ? spendingChart({
+                    spending: summary.spending,
+                    locale,
+                    rtl: false,
+                    caption: `${t("spending")}, ${monthName}`,
+                    headers: [t("category"), t("amount"), t("share")],
+                  })
+                : h("p", { class: "empty" }, t("noSpending", { month: monthName })),
+              "panel-chart",
+            ),
+          ),
         ),
       ),
       h("footer", { class: "footer" }, t("privacy")),
