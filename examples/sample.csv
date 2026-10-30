@@ -1,0 +1,21 @@
+date,type,category,amount,note
+2026-09-01,income,salary,14500.00,September salary
+2026-09-02,expense,housing,4200.00,"Rent, Al Sadd"
+2026-09-05,expense,remittance,1500.00,Sent to family
+2026-09-07,expense,groceries,620.75,Weekly shop
+2026-09-12,expense,transport,310.00,Fuel
+2026-09-20,expense,dining,240.50,Dinner out
+2026-09-25,expense,bills,395.00,Ooredoo and Kahramaa
+2026-10-01,income,salary,14500.00,October salary
+2026-10-02,expense,housing,4200.00,"Rent, Al Sadd"
+2026-10-04,expense,remittance,2000.00,Sent to family
+2026-10-05,expense,groceries,412.30,Weekly shop
+2026-10-08,expense,transport,95.00,Metro card top up
+2026-10-10,expense,dining,148.00,كرك وعشاء مع الأصدقاء
+2026-10-15,expense,transport,260.00,Fuel
+2026-10-19,expense,groceries,186.25,Weekly shop
+2026-10-20,expense,bills,395.00,Ooredoo and Kahramaa
+2026-10-22,expense,shopping,349.00,Shoes
+2026-10-24,income,freelance,1200.00,Logo design
+2026-10-26,expense,entertainment,85.00,Cinema
+2026-10-28,expense,health,120.00,Pharmacy
