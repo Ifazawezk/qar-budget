@@ -30,6 +30,11 @@ export function toISODate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** Midnight local time on the given YYYY-MM-DD date, for Intl formatting. */
+export function parseLocalDate(date: string): Date {
+  return new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
+}
+
 export function today(now = new Date()): string {
   return toISODate(now);
 }

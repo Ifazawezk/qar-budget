@@ -1,14 +1,22 @@
-import { load } from "./lib/storage";
+import "./style.css";
+import type { KeyValueStore } from "./lib/storage";
+import { startApp } from "./ui/app";
 
-const root = document.querySelector<HTMLDivElement>("#app");
+function browserStore(): KeyValueStore {
+  try {
+    // Reading localStorage throws in some privacy modes; fall back to memory for the session.
+    const storage = window.localStorage;
+    storage.getItem("qar-budget:probe");
+    return storage;
+  } catch {
+    const items = new Map<string, string>();
+    return {
+      getItem: (key) => items.get(key) ?? null,
+      setItem: (key, value) => void items.set(key, value),
+    };
+  }
+}
+
+const root = document.querySelector<HTMLElement>("#app");
 if (!root) throw new Error("Missing #app element");
-
-const { data, problem } = load(localStorage);
-
-const title = document.createElement("h1");
-title.textContent = "QAR Budget";
-const status = document.createElement("p");
-status.textContent = problem
-  ? `Saved data could not be read (${problem}). A backup copy was kept.`
-  : `${data.transactions.length} entries saved on this device.`;
-root.append(title, status);
+startApp(root, browserStore());

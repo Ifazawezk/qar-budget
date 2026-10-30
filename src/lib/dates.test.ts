@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { currentMonth, isValidDate, isValidMonth, monthOf, shiftMonth, today } from "./dates";
+import {
+  currentMonth,
+  isValidDate,
+  isValidMonth,
+  monthOf,
+  parseLocalDate,
+  shiftMonth,
+  toISODate,
+  today,
+} from "./dates";
 
 describe("dates", () => {
   it("validates real calendar dates only", () => {
@@ -15,6 +24,12 @@ describe("dates", () => {
     expect(isValidMonth("2026-10")).toBe(true);
     expect(isValidMonth("2026-00")).toBe(false);
     expect(isValidMonth("2026-13")).toBe(false);
+  });
+
+  it("parses dates in local time", () => {
+    const date = parseLocalDate("2026-03-05");
+    expect([date.getFullYear(), date.getMonth(), date.getDate()]).toEqual([2026, 2, 5]);
+    expect(toISODate(date)).toBe("2026-03-05");
   });
 
   it("uses local time for today", () => {

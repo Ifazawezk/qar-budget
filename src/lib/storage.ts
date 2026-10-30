@@ -103,3 +103,28 @@ export function load(store: KeyValueStore): LoadResult {
 export function save(store: KeyValueStore, data: AppData): void {
   store.setItem(STORAGE_KEY, serialize(data));
 }
+
+// Display preferences live under their own key. They are not part of exports,
+// and unknown values simply fall back to the defaults, so they need no versioning.
+export const SETTINGS_KEY = "qar-budget:settings";
+
+export type Theme = "auto" | "light" | "dark";
+
+export interface Settings {
+  theme: Theme;
+}
+
+export function loadSettings(store: KeyValueStore): Settings {
+  let raw: unknown = null;
+  try {
+    raw = JSON.parse(store.getItem(SETTINGS_KEY) ?? "null");
+  } catch {
+    // Ignore and use defaults.
+  }
+  const theme = isRecord(raw) && (raw.theme === "light" || raw.theme === "dark") ? raw.theme : "auto";
+  return { theme };
+}
+
+export function saveSettings(store: KeyValueStore, settings: Settings): void {
+  store.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}

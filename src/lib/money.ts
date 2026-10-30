@@ -39,17 +39,28 @@ export function toDecimal(amount: Dirhams): string {
 
 const formatters = new Map<string, Intl.NumberFormat>();
 
-/** Format for display with the locale's own digits and currency sign. */
-export function formatQAR(amount: Dirhams, locale = "en-QA"): string {
-  let formatter = formatters.get(locale);
-  if (!formatter) {
-    formatter = new Intl.NumberFormat(locale, {
+function formatter(locale: string, signed: boolean): Intl.NumberFormat {
+  const key = `${locale}|${signed}`;
+  let cached = formatters.get(key);
+  if (!cached) {
+    cached = new Intl.NumberFormat(locale, {
       style: "currency",
       currency: "QAR",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
+      signDisplay: signed ? "exceptZero" : "auto",
     });
-    formatters.set(locale, formatter);
+    formatters.set(key, cached);
   }
-  return formatter.format(amount / 100);
+  return cached;
+}
+
+/** Format for display with the locale's own digits and currency sign. */
+export function formatQAR(amount: Dirhams, locale = "en-QA"): string {
+  return formatter(locale, false).format(amount / 100);
+}
+
+/** Like formatQAR but always shows + or -, placed where the locale expects it. */
+export function formatSigned(amount: Dirhams, locale = "en-QA"): string {
+  return formatter(locale, true).format(amount / 100);
 }

@@ -4,9 +4,12 @@ import {
   DataError,
   type KeyValueStore,
   load,
+  loadSettings,
   migrate,
   save,
+  saveSettings,
   SCHEMA_VERSION,
+  SETTINGS_KEY,
   STORAGE_KEY,
 } from "./storage";
 import type { AppData } from "./types";
@@ -47,6 +50,23 @@ describe("load and save", () => {
     expect(result.data.transactions).toEqual([]);
     expect(result.problem).toBeTruthy();
     expect(store.getItem(BACKUP_KEY)).toBe("{not json");
+  });
+});
+
+describe("settings", () => {
+  it("falls back to defaults for missing or unknown values", () => {
+    const store = new MemoryStore();
+    expect(loadSettings(store)).toEqual({ theme: "auto" });
+    store.setItem(SETTINGS_KEY, '{"theme":"purple"}');
+    expect(loadSettings(store)).toEqual({ theme: "auto" });
+    store.setItem(SETTINGS_KEY, "oops");
+    expect(loadSettings(store)).toEqual({ theme: "auto" });
+  });
+
+  it("saves and loads the theme", () => {
+    const store = new MemoryStore();
+    saveSettings(store, { theme: "dark" });
+    expect(loadSettings(store)).toEqual({ theme: "dark" });
   });
 });
 

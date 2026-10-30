@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatQAR, parseAmount, toDecimal } from "./money";
+import { formatQAR, formatSigned, parseAmount, toDecimal } from "./money";
 
 describe("parseAmount", () => {
   it("reads whole and decimal amounts as dirhams", () => {
@@ -55,6 +55,12 @@ describe("formatQAR", () => {
   it("formats in English with the QAR code", () => {
     expect(plain(formatQAR(123450, "en-QA"))).toBe("QAR 1,234.50");
     expect(plain(formatQAR(5000))).toBe("QAR 50.00");
+  });
+
+  it("shows a sign for income and expenses", () => {
+    expect(plain(formatSigned(150000))).toBe("+QAR 1,500.00");
+    expect(plain(formatSigned(-4550))).toBe("-QAR 45.50");
+    expect(plain(formatSigned(0))).toBe("QAR 0.00");
   });
 
   it("formats in Arabic with the riyal sign", () => {
