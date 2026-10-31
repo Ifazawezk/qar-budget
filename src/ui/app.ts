@@ -4,6 +4,7 @@ import { exportCSV, exportFileName, exportJSON, importFile } from "../lib/files"
 import { formatDay, formatMonth } from "../lib/format";
 import type { Lang } from "../lib/i18n";
 import { applyRuleEdit, createRule, postDue, resumeRule, type RuleInput } from "../lib/recurring";
+import { remittanceYear } from "../lib/remittance";
 import {
   type KeyValueStore,
   load,
@@ -24,6 +25,7 @@ import { type EntryInput, entryForm } from "./form";
 import { entryList } from "./list";
 import { monthNav, summaryCards } from "./overview";
 import { recurringPanel } from "./recurring";
+import { remittancePanel, remittanceTitle } from "./remittance";
 
 interface Notice {
   tone: "info" | "error";
@@ -317,6 +319,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     const previous = summarize(data.transactions, shiftMonth(month, -1));
     const monthName = formatMonth(month, ctx.locale);
     const ruleBeingEdited = data.recurring.find((rule) => rule.id === editingRule) ?? null;
+    const sentHome = remittanceYear(data.transactions, month.slice(0, 4));
 
     root.replaceChildren(
       h(
@@ -433,6 +436,11 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
                 onSave: saveBudgets,
               }),
               "panel-budgets",
+            ),
+            panel(
+              remittanceTitle(ctx, sentHome.year),
+              remittancePanel({ ctx, year: sentHome, month }),
+              "panel-remittance",
             ),
             panel(
               editingRule === null

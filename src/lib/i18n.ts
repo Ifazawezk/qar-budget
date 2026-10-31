@@ -106,6 +106,11 @@ const en = {
   ruleResumed: "Resumed. Next entry on {date}.",
   ruleDeleted: "Recurring entry deleted. Entries already added stay in your list.",
   posted: "Recurring entries added: {count}.",
+  sentHomeTitle: "Money sent home in {year}",
+  sentHomeCount: "Transfers: {count}",
+  sentHomeShare: "{percent} of income",
+  sentHomeMonth: "Sent in {month}: {amount}",
+  noSentHome: 'Nothing sent home in {year} yet. Use the category "{category}" and it shows up here.',
 };
 
 export type MessageKey = keyof typeof en;
@@ -220,6 +225,11 @@ const ar: Record<MessageKey, string> = {
   ruleResumed: "تم الاستئناف. المعاملة التالية في {date}.",
   ruleDeleted: "تم حذف المعاملة المتكررة. المعاملات المضافة سابقًا تبقى في قائمتك.",
   posted: "المعاملات المتكررة المضافة: {count}.",
+  sentHomeTitle: "التحويلات للأهل في {year}",
+  sentHomeCount: "عدد التحويلات: {count}",
+  sentHomeShare: "{percent} من الدخل",
+  sentHomeMonth: "أُرسل في {month}: {amount}",
+  noSentHome: "لا توجد تحويلات للأهل في {year} بعد. استخدم فئة «{category}» وستظهر هنا.",
 };
 
 const messages: Record<Lang, Record<MessageKey, string>> = { en, ar };

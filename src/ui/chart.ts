@@ -86,9 +86,16 @@ function draw(host: HTMLElement, width: number, o: ChartOptions): void {
   });
 }
 
-/** Horizontal bar chart of spending per category, redrawn whenever its width changes. */
-export function spendingChart(o: ChartOptions): HTMLElement {
-  const canvas = h("div", { class: "chart" });
+/**
+ * A table for screen readers. The hiding goes on a wrapper because a table ignores
+ * the width and clipping of .sr-only, and a long caption would widen the page.
+ */
+export function srTable(...parts: HTMLElement[]): HTMLElement {
+  return h("div", { class: "sr-only" }, h("table", {}, parts));
+}
+
+/** Call `drawAt` now and whenever the element's width changes. */
+export function drawOnResize(canvas: HTMLElement, drawAt: (width: number) => void): void {
   let drawnWidth = -1;
   const observer = new ResizeObserver(() => {
     // The old chart is detached on every re-render; stop watching it.
@@ -96,13 +103,17 @@ export function spendingChart(o: ChartOptions): HTMLElement {
     const width = Math.floor(canvas.clientWidth);
     if (width === 0 || width === drawnWidth) return;
     drawnWidth = width;
-    draw(canvas, width, o);
+    drawAt(width);
   });
   observer.observe(canvas);
+}
 
-  const table = h(
-    "table",
-    { class: "sr-only" },
+/** Horizontal bar chart of spending per category, redrawn whenever its width changes. */
+export function spendingChart(o: ChartOptions): HTMLElement {
+  const canvas = h("div", { class: "chart" });
+  drawOnResize(canvas, (width) => draw(canvas, width, o));
+
+  const table = srTable(
     h("caption", {}, o.caption),
     h("thead", {}, h("tr", {}, o.headers.map((text) => h("th", { scope: "col" }, text)))),
     h(

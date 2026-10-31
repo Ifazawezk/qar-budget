@@ -9,6 +9,7 @@
   --accent: #8a1538;
   --accent-strong: #6d0f2b;
   --accent-soft: #f7e8ed;
+  --accent-muted: #c47f96;
   --on-accent: #ffffff;
   --income: #12733f;
   --danger: #b3261e;
@@ -37,6 +38,7 @@
     --accent: #e0668a;
     --accent-strong: #ec87a5;
     --accent-soft: #3a1c26;
+  --accent-muted: #9c4f68;
     --on-accent: #1b1c1f;
     --income: #52c98a;
     --danger: #ff8a80;
@@ -60,6 +62,7 @@
   --accent: #e0668a;
   --accent-strong: #ec87a5;
   --accent-soft: #3a1c26;
+  --accent-muted: #9c4f68;
   --on-accent: #1b1c1f;
   --income: #52c98a;
   --danger: #ff8a80;
@@ -244,12 +247,16 @@ button {
   order: 4;
 }
 
-.panel-recurring {
+.panel-remittance {
   order: 5;
 }
 
-.panel-data {
+.panel-recurring {
   order: 6;
+}
+
+.panel-data {
+  order: 7;
 }
 
 @media (min-width: 880px) {
@@ -379,8 +386,32 @@ button {
   fill: transparent;
 }
 
-.chart-row:hover .chart-hit {
+.chart-row:hover .chart-hit,
+.chart-month:hover .chart-hit {
   fill: var(--surface-sunken);
+}
+
+.chart-column {
+  fill: var(--accent-muted);
+}
+
+.chart-month.is-selected .chart-column {
+  fill: var(--accent-strong);
+}
+
+.chart-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.chart-month.is-selected .chart-tick {
+  fill: var(--text);
+  font-weight: 700;
 }
 
 .panel {
@@ -846,6 +877,7 @@ input[name="amount"] {
 
 .recurring {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -874,6 +906,34 @@ input[name="amount"] {
 .rule.is-paused .entry-text,
 .rule.is-paused .entry-amount {
   opacity: 0.65;
+}
+
+/* Money sent home */
+
+/* minmax(0, ...) lets the chart shrink; an auto column would hold it at its drawn width. */
+.remittance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.remittance-total {
+  display: grid;
+  gap: 2px;
+}
+
+.remittance-value {
+  font-size: 1.6rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.remittance-month {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 /* Backup and files */
