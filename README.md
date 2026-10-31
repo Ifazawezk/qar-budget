@@ -13,10 +13,11 @@ There is no account and no server. Everything is saved in your own browser.
 - Add income and expenses with an amount in QAR, a category, a date and an optional note. Edit or delete them later; a delete can be undone.
 - A monthly view with income, spending and balance, how this month's spending compares with last month, and a bar chart of spending by category. Use the arrows to move between months.
 - A monthly budget per category with progress bars. A category close to its limit (80% or more) or over it gets a warning with an icon and text, not only a color.
+- Recurring entries for things like rent, salary and bills, every month or every week. Entries that have fallen due are added when you open the app, including any missed while it was closed. Each one is a normal entry you can edit or delete, and a deleted one stays deleted. You can pause, edit or delete a schedule at any time. Pausing skips those dates; they are not added later when you resume. A schedule on the 31st uses the last day of shorter months and goes back to the 31st afterwards.
 - Categories that fit life in Qatar, such as rent, money sent home, transport and fuel, and bills and phone.
 - English and Arabic, with a right-to-left layout for Arabic. Amounts are formatted with `Intl.NumberFormat` for `en-QA` and `ar-QA`, so the Arabic screen shows Arabic digits and ر.ق. Amount fields accept Arabic digits as well, so typing ١٢٥٫٥ works.
 - Light and dark mode. It follows your system setting until you choose one.
-- Export a JSON backup or a CSV file, and import either one back. Importing skips entries you already have, so importing the same file twice does not create duplicates.
+- Export a JSON backup or a CSV file, and import either one back. Importing skips entries you already have, so importing the same file twice does not create duplicates. JSON backups also hold budgets and recurring entries; CSV files hold entries only.
 - Data is stored in `localStorage` with a schema version. Data saved by an older version is upgraded when the app loads, and anything that cannot be read is copied to a backup key instead of being thrown away.
 
 ## Run it locally
@@ -45,7 +46,7 @@ npm run preview
 npm test
 ```
 
-All the logic lives in plain TypeScript modules in `src/lib` that do not touch the DOM, so Vitest tests them directly: amount parsing and formatting, monthly totals, budgets, reading and writing CSV, merging imports, and the storage migrations. The code in `src/ui` only turns that into HTML and SVG.
+All the logic lives in plain TypeScript modules in `src/lib` that do not touch the DOM, so Vitest tests them directly: amount parsing and formatting, monthly totals, budgets, recurring dates including month ends, reading and writing CSV, merging imports, and the storage migrations. The code in `src/ui` only turns that into HTML and SVG.
 
 `npm run build` also runs the TypeScript compiler in strict mode.
 

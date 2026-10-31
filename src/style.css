@@ -244,8 +244,12 @@ button {
   order: 4;
 }
 
-.panel-data {
+.panel-recurring {
   order: 5;
+}
+
+.panel-data {
+  order: 6;
 }
 
 @media (min-width: 880px) {
@@ -836,6 +840,40 @@ input[name="amount"] {
   min-height: 40px;
   font-variant-numeric: tabular-nums;
   text-align: end;
+}
+
+/* Recurring entries */
+
+.recurring {
+  display: grid;
+  gap: 12px;
+}
+
+.recurring > .btn {
+  justify-self: start;
+}
+
+/* Three buttons do not fit beside the text on a phone, so they get a row of their own. */
+.rule {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+}
+
+.rule-schedule {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.rule .entry-actions {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+.rule.is-paused .entry-text,
+.rule.is-paused .entry-amount {
+  opacity: 0.65;
 }
 
 /* Backup and files */

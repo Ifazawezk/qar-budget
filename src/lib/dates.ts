@@ -51,5 +51,24 @@ export function currentMonth(now = new Date()): string {
 export function shiftMonth(month: string, delta: number): string {
   if (!isValidMonth(month)) throw new RangeError(`Invalid month: ${month}`);
   const index = Number(month.slice(0, 4)) * 12 + Number(month.slice(5, 7)) - 1 + delta;
-  return `${Math.floor(index / 12)}-${pad((index % 12) + 1)}`;
+  return `${String(Math.floor(index / 12)).padStart(4, "0")}-${pad((index % 12) + 1)}`;
+}
+
+export function daysInMonth(month: string): number {
+  // Day 0 of the next month is the last day of this one.
+  return new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate();
+}
+
+/** The given day of a month, or the month's last day when the month is shorter. */
+export function dayOfMonth(month: string, day: number): string {
+  return `${month}-${pad(Math.min(day, daysInMonth(month)))}`;
+}
+
+/** Counts in UTC, so a clock change in the browser's time zone cannot skip a day. */
+export function addDays(date: string, days: number): string {
+  const shifted = new Date(
+    Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)) + days),
+  );
+  const year = String(shifted.getUTCFullYear()).padStart(4, "0");
+  return `${year}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
 }

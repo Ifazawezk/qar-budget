@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDays,
   currentMonth,
+  dayOfMonth,
+  daysInMonth,
   isValidDate,
   isValidMonth,
   monthOf,
@@ -46,5 +49,34 @@ describe("dates", () => {
     expect(shiftMonth("2026-01", -1)).toBe("2025-12");
     expect(shiftMonth("2026-03", -14)).toBe("2025-01");
     expect(() => shiftMonth("2026-1", 1)).toThrow(RangeError);
+  });
+
+  it("keeps four digit years when moving months", () => {
+    expect(shiftMonth("0999-12", 1)).toBe("1000-01");
+    expect(shiftMonth("0999-10", 1)).toBe("0999-11");
+  });
+
+  it("knows how long each month is", () => {
+    expect(daysInMonth("2026-01")).toBe(31);
+    expect(daysInMonth("2026-02")).toBe(28);
+    expect(daysInMonth("2028-02")).toBe(29);
+    expect(daysInMonth("2100-02")).toBe(28);
+    expect(daysInMonth("2026-04")).toBe(30);
+    expect(daysInMonth("2026-12")).toBe(31);
+  });
+
+  it("uses the last day when a month is too short for the day asked for", () => {
+    expect(dayOfMonth("2026-02", 31)).toBe("2026-02-28");
+    expect(dayOfMonth("2028-02", 31)).toBe("2028-02-29");
+    expect(dayOfMonth("2026-04", 31)).toBe("2026-04-30");
+    expect(dayOfMonth("2026-03", 31)).toBe("2026-03-31");
+    expect(dayOfMonth("2026-03", 5)).toBe("2026-03-05");
+  });
+
+  it("adds days across months, years and leap days", () => {
+    expect(addDays("2026-10-30", 7)).toBe("2026-11-06");
+    expect(addDays("2026-12-28", 7)).toBe("2027-01-04");
+    expect(addDays("2028-02-28", 1)).toBe("2028-02-29");
+    expect(addDays("2026-02-28", 1)).toBe("2026-03-01");
   });
 });
