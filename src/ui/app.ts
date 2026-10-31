@@ -2,7 +2,7 @@ import { budgetLines } from "../lib/budgets";
 import { currentMonth, monthOf, shiftMonth, today } from "../lib/dates";
 import { exportCSV, exportFileName, exportJSON, importFile } from "../lib/files";
 import { formatDay, formatMonth } from "../lib/format";
-import type { Lang } from "../lib/i18n";
+import { type Lang, manifestFile } from "../lib/i18n";
 import { applyRuleEdit, createRule, postDue, resumeRule, type RuleInput } from "../lib/recurring";
 import { remittanceYear } from "../lib/remittance";
 import {
@@ -31,13 +31,20 @@ interface Notice {
   tone: "info" | "error";
   text: string;
   action?: { label: string; run: () => void };
+  /** Stays until dismissed, like an error. */
+  sticky?: boolean;
+}
+
+export interface App {
+  /** Tell the user a new version has arrived and let them reload when they are ready. */
+  offerReload: () => void;
 }
 
 function panel(title: string, body: Node, className: string): HTMLElement {
   return h("section", { class: `panel ${className}` }, h("h2", { class: "panel-title" }, title), body);
 }
 
-export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: Lang): void {
+export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: Lang): App {
   const loaded = load(store);
   let data: AppData = loaded.data;
   let settings: Settings = loadSettings(store, browserLang);
@@ -64,7 +71,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
   function showNotice(next: Notice | null): void {
     notice = next;
     window.clearTimeout(toastTimer);
-    if (next?.tone === "info") {
+    if (next?.tone === "info" && !next.sticky) {
       toastTimer = window.setTimeout(() => showNotice(null), next.action ? 8000 : 5000);
     }
     toastHost.replaceChildren(
@@ -312,6 +319,9 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     if (settings.theme === "auto") html.removeAttribute("data-theme");
     else html.dataset.theme = settings.theme;
     document.title = t("appTitle");
+    const manifest = `${import.meta.env.BASE_URL}${manifestFile(ctx.lang)}`;
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (manifestLink?.getAttribute("href") !== manifest) manifestLink?.setAttribute("href", manifest);
 
     const editing = data.transactions.find((tx) => tx.id === editingId) ?? null;
     const themeLabel = isDark() ? t("themeToLight") : t("themeToDark");
@@ -479,4 +489,15 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
   } else if (posted > 0) {
     showNotice({ tone: "info", text: ctx.t("posted", { count: ctx.count(posted) }) });
   }
+
+  return {
+    offerReload() {
+      showNotice({
+        tone: "info",
+        sticky: true,
+        text: ctx.t("updateReady"),
+        action: { label: ctx.t("reload"), run: () => location.reload() },
+      });
+    },
+  };
 }

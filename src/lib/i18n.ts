@@ -111,6 +111,8 @@ const en = {
   sentHomeShare: "{percent} of income",
   sentHomeMonth: "Sent in {month}: {amount}",
   noSentHome: 'Nothing sent home in {year} yet. Use the category "{category}" and it shows up here.',
+  updateReady: "A new version is ready.",
+  reload: "Reload",
 };
 
 export type MessageKey = keyof typeof en;
@@ -230,6 +232,8 @@ const ar: Record<MessageKey, string> = {
   sentHomeShare: "{percent} من الدخل",
   sentHomeMonth: "أُرسل في {month}: {amount}",
   noSentHome: "لا توجد تحويلات للأهل في {year} بعد. استخدم فئة «{category}» وستظهر هنا.",
+  updateReady: "يتوفر إصدار جديد.",
+  reload: "إعادة التحميل",
 };
 
 const messages: Record<Lang, Record<MessageKey, string>> = { en, ar };
@@ -251,6 +255,11 @@ export function localeFor(lang: Lang): string {
 
 export function isRtl(lang: Lang): boolean {
   return lang === "ar";
+}
+
+/** Installing from the Arabic screen should give the app its Arabic name. */
+export function manifestFile(lang: Lang): string {
+  return lang === "ar" ? "manifest-ar.webmanifest" : "manifest.webmanifest";
 }
 
 /** First visit: Arabic if the browser prefers it, otherwise English. */
