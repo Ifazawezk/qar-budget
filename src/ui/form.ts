@@ -15,8 +15,61 @@ export interface FormOptions {
   onCancel: () => void;
 }
 
-function field(label: string, control: HTMLElement): HTMLElement {
+export function field(label: string, control: HTMLElement): HTMLElement {
   return h("label", { class: "field" }, h("span", { class: "field-label" }, label), control);
+}
+
+/** Fill a category list for one kind. A category this version does not know stays selectable. */
+export function fillCategories(
+  select: HTMLSelectElement,
+  ctx: UiContext,
+  kind: Kind,
+  selected?: string,
+): void {
+  const options = categoriesFor(kind).map((c) => ({ id: c.id, label: ctx.category(c.id) }));
+  if (selected && !options.some((o) => o.id === selected)) {
+    options.push({ id: selected, label: selected });
+  }
+  select.replaceChildren(
+    ...options.map((o) => h("option", { value: o.id, selected: o.id === selected }, o.label)),
+  );
+}
+
+export function segmented<T extends string>(
+  legend: string,
+  name: string,
+  options: readonly { value: T; label: string; class?: string }[],
+  current: T,
+  onChange: (value: T) => void,
+): HTMLElement {
+  return h(
+    "fieldset",
+    { class: "segmented" },
+    h("legend", { class: "sr-only" }, legend),
+    options.map((option) =>
+      h(
+        "label",
+        { class: `segment ${option.class ?? ""}` },
+        h("input", {
+          type: "radio",
+          name,
+          value: option.value,
+          checked: option.value === current,
+          onchange: () => onChange(option.value),
+        }),
+        h("span", {}, option.label),
+      ),
+    ),
+  );
+}
+
+export function kindToggle(ctx: UiContext, current: Kind, onChange: (kind: Kind) => void): HTMLElement {
+  const kinds = (["expense", "income"] as const).map((k) => ({
+    value: k,
+    label: ctx.t(k),
+    class: `segment-${k}`,
+  }));
+  return segmented(ctx.t("kind"), "kind", kinds, current, onChange);
 }
 
 export function entryForm({ ctx, editing, defaultDate, onSubmit, onCancel }: FormOptions): HTMLElement {
@@ -50,17 +103,7 @@ export function entryForm({ ctx, editing, defaultDate, onSubmit, onCancel }: For
   });
   const error = h("p", { class: "form-error", id: "entry-error", hidden: true });
 
-  function fillCategories(selected?: string): void {
-    const options = categoriesFor(kind).map((c) => ({ id: c.id, label: ctx.category(c.id) }));
-    // An imported entry may use a category this version does not know. Keep it selectable.
-    if (selected && !options.some((o) => o.id === selected)) {
-      options.push({ id: selected, label: selected });
-    }
-    category.replaceChildren(
-      ...options.map((o) => h("option", { value: o.id, selected: o.id === selected }, o.label)),
-    );
-  }
-  fillCategories(editing?.category);
+  fillCategories(category, ctx, kind, editing?.category);
 
   function showError(message: string, input: HTMLInputElement): void {
     error.textContent = message;
@@ -90,28 +133,10 @@ export function entryForm({ ctx, editing, defaultDate, onSubmit, onCancel }: For
     });
   }
 
-  const kindToggle = h(
-    "fieldset",
-    { class: "segmented" },
-    h("legend", { class: "sr-only" }, t("kind")),
-    (["expense", "income"] as const).map((k) =>
-      h(
-        "label",
-        { class: `segment segment-${k}` },
-        h("input", {
-          type: "radio",
-          name: "kind",
-          value: k,
-          checked: k === kind,
-          onchange: () => {
-            kind = k;
-            fillCategories();
-          },
-        }),
-        h("span", {}, t(k)),
-      ),
-    ),
-  );
+  const kinds = kindToggle(ctx, kind, (next) => {
+    kind = next;
+    fillCategories(category, ctx, kind);
+  });
 
   return h(
     "form",
@@ -123,7 +148,7 @@ export function entryForm({ ctx, editing, defaultDate, onSubmit, onCancel }: For
         if (editing && (event as KeyboardEvent).key === "Escape") onCancel();
       },
     },
-    kindToggle,
+    kinds,
     h("div", { class: "field-row" }, field(t("amount"), amount), field(t("date"), date)),
     field(t("category"), category),
     field(t("note"), note),

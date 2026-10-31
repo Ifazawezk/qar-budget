@@ -8,27 +8,23 @@ export function sortNewestFirst(transactions: readonly Transaction[]): Transacti
     .map(({ tx }) => tx);
 }
 
-/** Replace the entry with the same id, or add it at the end. */
-export function upsert(transactions: readonly Transaction[], tx: Transaction): Transaction[] {
-  const index = transactions.findIndex((t) => t.id === tx.id);
-  if (index === -1) return [...transactions, tx];
-  const next = [...transactions];
-  next[index] = tx;
+/** Replace the item with the same id, or add it at the end. */
+export function upsert<T extends { id: string }>(items: readonly T[], item: T): T[] {
+  const index = items.findIndex((t) => t.id === item.id);
+  if (index === -1) return [...items, item];
+  const next = [...items];
+  next[index] = item;
   return next;
 }
 
-export function remove(transactions: readonly Transaction[], id: string): Transaction[] {
-  return transactions.filter((t) => t.id !== id);
+export function remove<T extends { id: string }>(items: readonly T[], id: string): T[] {
+  return items.filter((t) => t.id !== id);
 }
 
-/** Put a removed entry back where it was, for undo. */
-export function restore(
-  transactions: readonly Transaction[],
-  tx: Transaction,
-  index: number,
-): Transaction[] {
-  const next = remove(transactions, tx.id);
-  next.splice(Math.min(Math.max(index, 0), next.length), 0, tx);
+/** Put a removed item back where it was, for undo. */
+export function restore<T extends { id: string }>(items: readonly T[], item: T, index: number): T[] {
+  const next = remove(items, item.id);
+  next.splice(Math.min(Math.max(index, 0), next.length), 0, item);
   return next;
 }
 

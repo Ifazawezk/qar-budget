@@ -2,6 +2,7 @@ import "./style.css";
 import { preferredLang } from "./lib/i18n";
 import type { KeyValueStore } from "./lib/storage";
 import { startApp } from "./ui/app";
+import { registerOffline } from "./ui/offline";
 
 function browserStore(): KeyValueStore {
   try {
@@ -20,4 +21,5 @@ function browserStore(): KeyValueStore {
 
 const root = document.querySelector<HTMLElement>("#app");
 if (!root) throw new Error("Missing #app element");
-startApp(root, browserStore(), preferredLang(navigator.languages ?? [navigator.language]));
+const app = startApp(root, browserStore(), preferredLang(navigator.languages ?? [navigator.language]));
+registerOffline(app.offerReload);

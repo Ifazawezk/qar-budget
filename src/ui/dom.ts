@@ -49,6 +49,8 @@ const ICONS = {
   warning: "M12 3.5L2.5 20h19L12 3.5zM12 10v4.5M12 17.5v.01",
   download: "M12 4v11M7 10l5 5 5-5M5 20h14",
   upload: "M12 15V4M7 9l5-5 5 5M5 20h14",
+  pause: "M9 5v14M15 5v14",
+  play: "M8 5l11 7-11 7V5z",
 };
 
 export type IconName = keyof typeof ICONS;

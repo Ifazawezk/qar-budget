@@ -79,6 +79,40 @@ const en = {
   fieldType: "type",
   fieldCategory: "category",
   fieldAmount: "amount",
+  recurring: "Recurring entries",
+  addRule: "Add recurring entry",
+  editRule: "Edit recurring entry",
+  noRules:
+    "Nothing set up yet. Add rent, salary or bills once and they are entered for you when they fall due.",
+  frequency: "Repeats",
+  monthly: "Every month",
+  weekly: "Every week",
+  firstDate: "First date",
+  nextDate: "Next date",
+  rulePlaceholder: "Optional, for example flat rent",
+  ruleHint:
+    "Due entries are added when you open the app. If the date has passed, the missed entries are added now. If a month is too short for the day, its last day is used.",
+  ruleDateTooOld: "Pick a date within the last 12 months.",
+  scheduleMonthly: "Every month on day {day}",
+  scheduleWeekly: "Every week on {weekday}",
+  scheduleNext: "{schedule}. Next on {date}.",
+  schedulePaused: "{schedule}. Paused.",
+  pause: "Pause",
+  resume: "Resume",
+  pauseLabel: "Pause {name}",
+  resumeLabel: "Resume {name}",
+  ruleSaved: "Recurring entry saved.",
+  rulePaused: "Paused. No entries are added until you resume it.",
+  ruleResumed: "Resumed. Next entry on {date}.",
+  ruleDeleted: "Recurring entry deleted. Entries already added stay in your list.",
+  posted: "Recurring entries added: {count}.",
+  sentHomeTitle: "Money sent home in {year}",
+  sentHomeCount: "Transfers: {count}",
+  sentHomeShare: "{percent} of income",
+  sentHomeMonth: "Sent in {month}: {amount}",
+  noSentHome: 'Nothing sent home in {year} yet. Use the category "{category}" and it shows up here.',
+  updateReady: "A new version is ready.",
+  reload: "Reload",
 };
 
 export type MessageKey = keyof typeof en;
@@ -167,9 +201,45 @@ const ar: Record<MessageKey, string> = {
   fieldType: "النوع",
   fieldCategory: "الفئة",
   fieldAmount: "المبلغ",
+  recurring: "المعاملات المتكررة",
+  addRule: "إضافة معاملة متكررة",
+  editRule: "تعديل المعاملة المتكررة",
+  noRules: "لا يوجد شيء بعد. أضف الإيجار أو الراتب أو الفواتير مرة واحدة، وستُسجَّل تلقائيًا عند موعدها.",
+  frequency: "التكرار",
+  monthly: "كل شهر",
+  weekly: "كل أسبوع",
+  firstDate: "أول موعد",
+  nextDate: "الموعد القادم",
+  rulePlaceholder: "اختياري، مثل إيجار الشقة",
+  ruleHint:
+    "تُضاف المعاملات المستحقة عند فتح التطبيق. إذا كان التاريخ قد مضى فستُضاف المعاملات الفائتة الآن. وإذا كان الشهر أقصر من اليوم المختار فسيُستخدم آخر يوم فيه.",
+  ruleDateTooOld: "اختر تاريخًا خلال آخر ١٢ شهرًا.",
+  scheduleMonthly: "كل شهر في اليوم {day}",
+  scheduleWeekly: "كل أسبوع يوم {weekday}",
+  scheduleNext: "{schedule}. الموعد القادم {date}.",
+  schedulePaused: "{schedule}. متوقفة مؤقتًا.",
+  pause: "إيقاف مؤقت",
+  resume: "استئناف",
+  pauseLabel: "إيقاف {name} مؤقتًا",
+  resumeLabel: "استئناف {name}",
+  ruleSaved: "تم حفظ المعاملة المتكررة.",
+  rulePaused: "تم الإيقاف المؤقت. لن تُضاف معاملات حتى تستأنفها.",
+  ruleResumed: "تم الاستئناف. المعاملة التالية في {date}.",
+  ruleDeleted: "تم حذف المعاملة المتكررة. المعاملات المضافة سابقًا تبقى في قائمتك.",
+  posted: "المعاملات المتكررة المضافة: {count}.",
+  sentHomeTitle: "التحويلات للأهل في {year}",
+  sentHomeCount: "عدد التحويلات: {count}",
+  sentHomeShare: "{percent} من الدخل",
+  sentHomeMonth: "أُرسل في {month}: {amount}",
+  noSentHome: "لا توجد تحويلات للأهل في {year} بعد. استخدم فئة «{category}» وستظهر هنا.",
+  updateReady: "يتوفر إصدار جديد.",
+  reload: "إعادة التحميل",
 };
 
 const messages: Record<Lang, Record<MessageKey, string>> = { en, ar };
+
+/** Every message key, so tests can check both languages against each other. */
+export const MESSAGE_KEYS = Object.keys(en) as MessageKey[];
 
 export function translator(lang: Lang): Translate {
   const table = messages[lang];
@@ -185,6 +255,11 @@ export function localeFor(lang: Lang): string {
 
 export function isRtl(lang: Lang): boolean {
   return lang === "ar";
+}
+
+/** Installing from the Arabic screen should give the app its Arabic name. */
+export function manifestFile(lang: Lang): string {
+  return lang === "ar" ? "manifest-ar.webmanifest" : "manifest.webmanifest";
 }
 
 /** First visit: Arabic if the browser prefers it, otherwise English. */

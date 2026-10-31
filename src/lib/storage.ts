@@ -1,10 +1,10 @@
 import { isValidDate } from "./dates";
 import type { Lang } from "./i18n";
-import type { AppData, Budgets, Transaction } from "./types";
+import type { AppData, Budgets, Kind, RecurringRule, Transaction } from "./types";
 
 export const STORAGE_KEY = "qar-budget:data";
 export const BACKUP_KEY = "qar-budget:backup";
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** The part of the Web Storage API used here, so tests can pass a simple fake. */
 export interface KeyValueStore {
@@ -28,6 +28,8 @@ type Doc = Record<string, unknown>;
 const MIGRATIONS: Record<number, (doc: Doc) => Doc> = {
   // 1 -> 2: monthly budgets per category.
   1: (doc) => ({ ...doc, version: 2, budgets: {} }),
+  // 2 -> 3: recurring entries.
+  2: (doc) => ({ ...doc, version: 3, recurring: [] }),
 };
 
 function isRecord(value: unknown): value is Doc {
@@ -35,7 +37,7 @@ function isRecord(value: unknown): value is Doc {
 }
 
 export function emptyData(): AppData {
-  return { transactions: [], budgets: {} };
+  return { transactions: [], budgets: {}, recurring: [] };
 }
 
 function readBudgets(raw: unknown): Budgets {
@@ -50,10 +52,18 @@ function readBudgets(raw: unknown): Budgets {
   return Object.fromEntries(entries) as Budgets;
 }
 
-function readTransaction(raw: unknown, index: number): Transaction {
-  const where = `Entry ${index + 1}`;
+interface EntryFields {
+  id: string;
+  kind: Kind;
+  amount: number;
+  category: string;
+  note: string;
+}
+
+/** The fields an entry and a recurring rule share. */
+function readEntryFields(raw: unknown, where: string): EntryFields & Doc {
   if (!isRecord(raw)) throw new DataError(`${where} is not an object`);
-  const { id, kind, amount, category, date } = raw;
+  const { id, kind, amount, category } = raw;
   const note = raw.note ?? "";
   if (typeof id !== "string" || id === "") throw new DataError(`${where} has no id`);
   if (kind !== "income" && kind !== "expense") throw new DataError(`${where} has an unknown type`);
@@ -63,18 +73,51 @@ function readTransaction(raw: unknown, index: number): Transaction {
   if (typeof category !== "string" || category === "") {
     throw new DataError(`${where} has no category`);
   }
-  if (typeof date !== "string" || !isValidDate(date)) {
+  if (typeof note !== "string") throw new DataError(`${where} has an invalid note`);
+  return { ...raw, id, kind, amount, category, note };
+}
+
+function readDate(value: unknown, where: string): string {
+  if (typeof value !== "string" || !isValidDate(value)) {
     throw new DataError(`${where} has an invalid date`);
   }
-  if (typeof note !== "string") throw new DataError(`${where} has an invalid note`);
-  return { id, kind, amount, category, date, note };
+  return value;
+}
+
+function readTransaction(raw: unknown, index: number): Transaction {
+  const where = `Entry ${index + 1}`;
+  const { id, kind, amount, category, note, date } = readEntryFields(raw, where);
+  return { id, kind, amount, category, date: readDate(date, where), note };
+}
+
+function readRule(raw: unknown, index: number): RecurringRule {
+  const where = `Recurring entry ${index + 1}`;
+  const fields = readEntryFields(raw, where);
+  const { id, kind, amount, category, note, frequency, paused } = fields;
+  if (frequency !== "monthly" && frequency !== "weekly") {
+    throw new DataError(`${where} has an unknown frequency`);
+  }
+  if (typeof paused !== "boolean") throw new DataError(`${where} has an invalid paused state`);
+  return {
+    id,
+    kind,
+    amount,
+    category,
+    note,
+    frequency,
+    startDate: readDate(fields.startDate, where),
+    nextDue: readDate(fields.nextDue, where),
+    paused,
+  };
 }
 
 function validate(doc: Doc): AppData {
   if (!Array.isArray(doc.transactions)) throw new DataError("The list of entries is missing");
+  if (!Array.isArray(doc.recurring)) throw new DataError("The list of recurring entries is missing");
   return {
     transactions: doc.transactions.map(readTransaction),
     budgets: readBudgets(doc.budgets),
+    recurring: doc.recurring.map(readRule),
   };
 }
 

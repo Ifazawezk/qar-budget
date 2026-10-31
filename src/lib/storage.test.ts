@@ -30,12 +30,25 @@ const sample: AppData = {
     { id: "b", kind: "expense", amount: 4550, category: "groceries", date: "2026-10-03", note: "Lulu" },
   ],
   budgets: { groceries: 150000 },
+  recurring: [
+    {
+      id: "rent",
+      kind: "expense",
+      amount: 420000,
+      category: "housing",
+      note: "Rent",
+      frequency: "monthly",
+      startDate: "2026-01-31",
+      nextDue: "2026-11-30",
+      paused: false,
+    },
+  ],
 };
 
 describe("load and save", () => {
   it("starts empty when nothing is saved", () => {
     expect(load(new MemoryStore())).toEqual({
-      data: { transactions: [], budgets: {} },
+      data: { transactions: [], budgets: {}, recurring: [] },
       problem: null,
     });
   });
@@ -54,6 +67,17 @@ describe("load and save", () => {
     expect(result.data.transactions).toEqual([]);
     expect(result.problem).toBeTruthy();
     expect(store.getItem(BACKUP_KEY)).toBe("{not json");
+  });
+
+  it("opens data saved by the previous version without losing anything", () => {
+    const store = new MemoryStore();
+    const saved = { version: 2, transactions: sample.transactions, budgets: sample.budgets };
+    store.setItem(STORAGE_KEY, JSON.stringify(saved));
+    expect(load(store)).toEqual({
+      data: { transactions: sample.transactions, budgets: sample.budgets, recurring: [] },
+      problem: null,
+    });
+    expect(store.getItem(BACKUP_KEY)).toBeNull();
   });
 });
 
@@ -75,9 +99,39 @@ describe("settings", () => {
 });
 
 describe("migrate", () => {
-  it("upgrades version 1 data, which had no budgets", () => {
+  it("upgrades version 1 data through every step", () => {
     const v1 = { version: 1, transactions: sample.transactions };
-    expect(migrate(v1)).toEqual({ transactions: sample.transactions, budgets: {} });
+    expect(migrate(v1)).toEqual({ transactions: sample.transactions, budgets: {}, recurring: [] });
+  });
+
+  it("upgrades version 2 data, which had no recurring entries", () => {
+    const v2 = { version: 2, transactions: sample.transactions, budgets: sample.budgets };
+    expect(migrate(v2)).toEqual({
+      transactions: sample.transactions,
+      budgets: sample.budgets,
+      recurring: [],
+    });
+  });
+
+  it("does not change a version 3 document", () => {
+    expect(migrate({ version: 3, ...sample })).toEqual(sample);
+  });
+
+  it("checks recurring entries", () => {
+    const rule = sample.recurring[0];
+    const doc = (changes: object) => ({
+      version: 3,
+      transactions: [],
+      budgets: {},
+      recurring: [{ ...rule, ...changes }],
+    });
+    expect(() => migrate({ version: 3, transactions: [], budgets: {} })).toThrow(/recurring/);
+    expect(() => migrate(doc({ frequency: "daily" }))).toThrow("Recurring entry 1 has an unknown frequency");
+    expect(() => migrate(doc({ nextDue: "2026-02-31" }))).toThrow(/invalid date/);
+    expect(() => migrate(doc({ startDate: "soon" }))).toThrow(/invalid date/);
+    expect(() => migrate(doc({ amount: 0 }))).toThrow(/invalid amount/);
+    expect(() => migrate(doc({ paused: "no" }))).toThrow(/paused/);
+    expect(() => migrate(doc({ id: "" }))).toThrow(/no id/);
   });
 
   it("checks budgets", () => {
@@ -91,7 +145,9 @@ describe("migrate", () => {
   });
 
   it("keeps a __proto__ key as plain data", () => {
-    const data = migrate(JSON.parse('{"version":2,"transactions":[],"budgets":{"__proto__":100}}'));
+    const data = migrate(
+      JSON.parse('{"version":3,"transactions":[],"budgets":{"__proto__":100},"recurring":[]}'),
+    );
     expect(Object.getPrototypeOf(data.budgets)).toBe(Object.prototype);
     expect(Object.keys(data.budgets)).toEqual(["__proto__"]);
   });

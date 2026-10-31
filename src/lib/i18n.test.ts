@@ -1,5 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { localeFor, preferredLang, translator } from "./i18n";
+import { localeFor, MESSAGE_KEYS, preferredLang, translator } from "./i18n";
+
+function placeholders(text: string): string[] {
+  return (text.match(/\{\w+\}/g) ?? []).sort();
+}
+
+describe("translations", () => {
+  const en = translator("en");
+  const ar = translator("ar");
+
+  it("uses the same placeholders in both languages", () => {
+    for (const key of MESSAGE_KEYS) {
+      expect(placeholders(ar(key)), key).toEqual(placeholders(en(key)));
+    }
+  });
+
+  it("has real Arabic text for every message that is not a brand or format name", () => {
+    const latinByDesign = new Set(["switchLang", "exportJson", "exportCsv"]);
+    for (const key of MESSAGE_KEYS) {
+      if (!latinByDesign.has(key)) expect(ar(key), key).toMatch(/[؀-ۿ]/);
+    }
+  });
+});
 
 describe("translator", () => {
   it("fills in placeholders", () => {

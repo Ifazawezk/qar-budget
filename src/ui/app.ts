@@ -1,8 +1,10 @@
 import { budgetLines } from "../lib/budgets";
 import { currentMonth, monthOf, shiftMonth, today } from "../lib/dates";
 import { exportCSV, exportFileName, exportJSON, importFile } from "../lib/files";
-import { formatMonth } from "../lib/format";
-import type { Lang } from "../lib/i18n";
+import { formatDay, formatMonth } from "../lib/format";
+import { type Lang, manifestFile } from "../lib/i18n";
+import { applyRuleEdit, createRule, postDue, resumeRule, type RuleInput } from "../lib/recurring";
+import { remittanceYear } from "../lib/remittance";
 import {
   type KeyValueStore,
   load,
@@ -22,18 +24,27 @@ import { h, icon } from "./dom";
 import { type EntryInput, entryForm } from "./form";
 import { entryList } from "./list";
 import { monthNav, summaryCards } from "./overview";
+import { recurringPanel } from "./recurring";
+import { remittancePanel, remittanceTitle } from "./remittance";
 
 interface Notice {
   tone: "info" | "error";
   text: string;
   action?: { label: string; run: () => void };
+  /** Stays until dismissed, like an error. */
+  sticky?: boolean;
+}
+
+export interface App {
+  /** Tell the user a new version has arrived and let them reload when they are ready. */
+  offerReload: () => void;
 }
 
 function panel(title: string, body: Node, className: string): HTMLElement {
   return h("section", { class: `panel ${className}` }, h("h2", { class: "panel-title" }, title), body);
 }
 
-export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: Lang): void {
+export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: Lang): App {
   const loaded = load(store);
   let data: AppData = loaded.data;
   let settings: Settings = loadSettings(store, browserLang);
@@ -41,7 +52,9 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
   let month = currentMonth();
   let editingId: string | null = null;
   let editingBudgets = false;
+  let editingRule: string | "new" | null = null;
   let report: ImportReport | null = null;
+  let lastRecurringRun = today();
 
   const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
   darkQuery.addEventListener("change", () => {
@@ -58,7 +71,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
   function showNotice(next: Notice | null): void {
     notice = next;
     window.clearTimeout(toastTimer);
-    if (next?.tone === "info") {
+    if (next?.tone === "info" && !next.sticky) {
       toastTimer = window.setTimeout(() => showNotice(null), next.action ? 8000 : 5000);
     }
     toastHost.replaceChildren(
@@ -89,6 +102,20 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
       showNotice({ tone: "error", text: ctx.t("saveFailed") });
       return false;
     }
+  }
+
+  /** Add the entries that have fallen due. Returns how many were added and saved. */
+  function runRecurring(): number {
+    lastRecurringRun = today();
+    const result = postDue(data.transactions, data.recurring, lastRecurringRun);
+    if (!result.changed) return 0;
+    const { transactions, recurring } = result;
+    return commit({ ...data, transactions, recurring }) ? result.posted : 0;
+  }
+
+  /** `text` followed by a count of any recurring entries that were just added. */
+  function withPosted(text: string, posted: number): string {
+    return posted > 0 ? `${text} ${ctx.t("posted", { count: ctx.count(posted) })}` : text;
   }
 
   function focusAmount(): void {
@@ -148,6 +175,62 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     if (saved) showNotice({ tone: "info", text: ctx.t("budgetsSaved") });
   }
 
+  function openRuleForm(next: string | "new"): void {
+    editingRule = next;
+    render();
+    root.querySelector<HTMLInputElement>(".rule-form input[name='amount']")?.focus();
+  }
+
+  function closeRuleForm(): void {
+    editingRule = null;
+    render();
+  }
+
+  function saveRule(input: RuleInput): void {
+    const existing = data.recurring.find((rule) => rule.id === editingRule);
+    const rule = existing ? applyRuleEdit(existing, input, today()) : createRule(newId(), input);
+    editingRule = null;
+    const saved = commit({ ...data, recurring: upsert(data.recurring, rule) });
+    const posted = saved ? runRecurring() : 0;
+    render();
+    if (saved) showNotice({ tone: "info", text: withPosted(ctx.t("ruleSaved"), posted) });
+  }
+
+  function toggleRule(id: string): void {
+    const rule = data.recurring.find((r) => r.id === id);
+    if (!rule) return;
+    const now = today();
+    const next = rule.paused ? resumeRule(rule, now) : { ...rule, paused: true };
+    const saved = commit({ ...data, recurring: upsert(data.recurring, next) });
+    const posted = saved ? runRecurring() : 0;
+    render();
+    if (!saved) return;
+    const text = next.paused
+      ? ctx.t("rulePaused")
+      : ctx.t("ruleResumed", { date: formatDay(next.nextDue, ctx.locale, now) });
+    showNotice({ tone: "info", text: withPosted(text, posted) });
+  }
+
+  function deleteRule(id: string): void {
+    const index = data.recurring.findIndex((rule) => rule.id === id);
+    const rule = data.recurring[index];
+    if (!rule) return;
+    const saved = commit({ ...data, recurring: remove(data.recurring, id) });
+    render();
+    if (!saved) return;
+    showNotice({
+      tone: "info",
+      text: ctx.t("ruleDeleted"),
+      action: {
+        label: ctx.t("undo"),
+        run: () => {
+          if (commit({ ...data, recurring: restore(data.recurring, rule, index) })) showNotice(null);
+          render();
+        },
+      },
+    });
+  }
+
   function exportData(format: "json" | "csv"): void {
     if (format === "json") {
       download(exportFileName("json"), exportJSON(data), "application/json");
@@ -161,16 +244,16 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
       const result = importFile(data, file.name, await file.text(), newId);
       report = { fileName: file.name, issues: result.issues };
       const saved = commit(result.data);
+      // A restored backup can bring rules with dates that have passed since it was made.
+      const posted = saved ? runRecurring() : 0;
       render();
       if (saved) {
-        showNotice({
-          tone: "info",
-          text: ctx.t("importDone", {
-            added: ctx.count(result.added),
-            updated: ctx.count(result.updated),
-            skipped: ctx.count(result.skipped),
-          }),
+        const text = ctx.t("importDone", {
+          added: ctx.count(result.added),
+          updated: ctx.count(result.updated),
+          skipped: ctx.count(result.skipped),
         });
+        showNotice({ tone: "info", text: withPosted(text, posted) });
       }
     } catch (error) {
       report = null;
@@ -213,6 +296,21 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     updateSettings({ ...settings, lang: settings.lang === "ar" ? "en" : "ar" });
   }
 
+  // A phone keeps an installed app alive for days, so coming back to it has to count as
+  // opening it. Reading from storage first keeps a second tab from saving over this one.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible" || today() === lastRecurringRun) return;
+    const fresh = load(store);
+    if (fresh.problem) return;
+    if (month === monthOf(lastRecurringRun)) month = currentMonth();
+    data = fresh.data;
+    const posted = runRecurring();
+    render();
+    if (posted > 0) {
+      showNotice({ tone: "info", text: ctx.t("posted", { count: ctx.count(posted) }) });
+    }
+  });
+
   function render(): void {
     const { t } = ctx;
     const html = document.documentElement;
@@ -221,12 +319,17 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     if (settings.theme === "auto") html.removeAttribute("data-theme");
     else html.dataset.theme = settings.theme;
     document.title = t("appTitle");
+    const manifest = `${import.meta.env.BASE_URL}${manifestFile(ctx.lang)}`;
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (manifestLink?.getAttribute("href") !== manifest) manifestLink?.setAttribute("href", manifest);
 
     const editing = data.transactions.find((tx) => tx.id === editingId) ?? null;
     const themeLabel = isDark() ? t("themeToLight") : t("themeToDark");
     const summary = summarize(data.transactions, month);
     const previous = summarize(data.transactions, shiftMonth(month, -1));
     const monthName = formatMonth(month, ctx.locale);
+    const ruleBeingEdited = data.recurring.find((rule) => rule.id === editingRule) ?? null;
+    const sentHome = remittanceYear(data.transactions, month.slice(0, 4));
 
     root.replaceChildren(
       h(
@@ -345,6 +448,29 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
               "panel-budgets",
             ),
             panel(
+              remittanceTitle(ctx, sentHome.year),
+              remittancePanel({ ctx, year: sentHome, month }),
+              "panel-remittance",
+            ),
+            panel(
+              editingRule === null
+                ? t("recurring")
+                : t(editingRule === "new" ? "addRule" : "editRule"),
+              recurringPanel({
+                ctx,
+                rules: data.recurring,
+                today: today(),
+                editing: editingRule === "new" ? "new" : ruleBeingEdited,
+                onAdd: () => openRuleForm("new"),
+                onEdit: openRuleForm,
+                onCancel: closeRuleForm,
+                onSave: saveRule,
+                onToggle: toggleRule,
+                onDelete: deleteRule,
+              }),
+              "panel-recurring",
+            ),
+            panel(
               t("files"),
               dataPanel({ ctx, report, onExport: exportData, onImport: (file) => void importData(file) }),
               "panel-data",
@@ -356,8 +482,22 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     );
   }
 
+  const posted = loaded.problem ? 0 : runRecurring();
   render();
   if (loaded.problem) {
     showNotice({ tone: "error", text: ctx.t("loadProblem", { detail: loaded.problem }) });
+  } else if (posted > 0) {
+    showNotice({ tone: "info", text: ctx.t("posted", { count: ctx.count(posted) }) });
   }
+
+  return {
+    offerReload() {
+      showNotice({
+        tone: "info",
+        sticky: true,
+        text: ctx.t("updateReady"),
+        action: { label: ctx.t("reload"), run: () => location.reload() },
+      });
+    },
+  };
 }

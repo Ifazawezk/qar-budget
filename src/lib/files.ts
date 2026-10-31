@@ -1,5 +1,6 @@
 import { type CsvIssue, toCSV, transactionsFromCSV } from "./csv";
 import { today } from "./dates";
+import { mergeRules } from "./recurring";
 import { DataError, migrate, SCHEMA_VERSION } from "./storage";
 import { mergeTransactions } from "./transactions";
 import type { AppData } from "./types";
@@ -56,6 +57,7 @@ export function importFile(
       data: {
         transactions: merged.transactions,
         budgets: { ...current.budgets, ...incoming.budgets },
+        recurring: mergeRules(current.recurring, incoming.recurring),
       },
       added: merged.added,
       updated: merged.updated,
