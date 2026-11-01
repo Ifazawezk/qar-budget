@@ -14,14 +14,30 @@ function toLatinDigits(text: string): string {
 }
 
 /**
- * Read an amount the way people type it: "45", "45.5", "1,250.75", "١٢٥٫٥".
+ * Some phone keypads offer a comma as their decimal key, so a lone comma before at most
+ * two final digits is a decimal mark: "45,50" is 45.50, never 4550. Any other comma has to
+ * sit before three digits, as in "1,250" or "1,25,000". The rest could mean two different
+ * amounts, so they come back null and the person is asked to check them.
+ */
+function dropSeparators(text: string): string | null {
+  if (/^[^,.٬]*,\d{0,2}$/.test(text)) return text.replace(",", ".");
+  if (/[,٬]\d{0,2}(\.|$)/.test(text)) return null;
+  return text.replace(/[,٬]/g, "");
+}
+
+/**
+ * Read an amount the way people type it: "45", "45.5", "45,50", "1,250.75", "١٢٥٫٥".
  * Returns dirhams, or null when the text is not a non-negative amount
  * with at most two decimals.
  */
 export function parseAmount(input: string): Dirhams | null {
-  const text = toLatinDigits(input.trim())
-    .replace(/٫/g, ".") // Arabic decimal separator
-    .replace(/[,٬\s]/g, ""); // thousands separators
+  const text = dropSeparators(
+    toLatinDigits(input)
+      .replace(/٫/g, ".") // Arabic decimal separator
+      .replace(/،/g, ",") // Arabic comma
+      .replace(/\s/g, ""),
+  );
+  if (text === null) return null;
   const match = /^(?=\d|\.\d)(\d*)(?:\.(\d{0,2}))?$/.exec(text);
   if (!match) return null;
   const whole = Number(match[1] ?? "");

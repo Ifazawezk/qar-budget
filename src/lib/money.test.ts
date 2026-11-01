@@ -26,8 +26,30 @@ describe("parseAmount", () => {
     expect(parseAmount("۴۵")).toBe(4500);
   });
 
+  it("reads a comma from a phone keypad as the decimal mark", () => {
+    expect(parseAmount("45,50")).toBe(4550);
+    expect(parseAmount("125,5")).toBe(12550);
+    expect(parseAmount("12,")).toBe(1200);
+    expect(parseAmount(",75")).toBe(75);
+    expect(parseAmount("١٢٥،٥")).toBe(12550);
+    expect(parseAmount("٤٥,٥")).toBe(4550);
+  });
+
+  it("keeps a comma before three digits as a thousands separator", () => {
+    expect(parseAmount("1,250")).toBe(125000);
+    expect(parseAmount("1,250,000")).toBe(125000000);
+    expect(parseAmount("1,25,000")).toBe(12500000);
+    expect(parseAmount("١،٢٥٠")).toBe(125000);
+  });
+
+  it("refuses commas that could mean two different amounts", () => {
+    for (const bad of ["1,25.50", "1,234,56", "12,5,0", "1,2,3", "٣٬٥"]) {
+      expect(parseAmount(bad), bad).toBeNull();
+    }
+  });
+
   it("rejects anything that is not a plain amount", () => {
-    for (const bad of ["", ".", "abc", "12abc", "-5", "1.234", "1e5", "QAR 5"]) {
+    for (const bad of ["", ".", ",", "abc", "12abc", "-5", "1.234", "1e5", "QAR 5"]) {
       expect(parseAmount(bad), bad).toBeNull();
     }
   });
