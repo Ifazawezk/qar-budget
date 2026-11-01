@@ -435,6 +435,7 @@ button {
 .panel {
   min-width: 0;
   padding: 16px;
+  scroll-margin-top: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);

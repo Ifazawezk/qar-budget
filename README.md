@@ -10,7 +10,7 @@ There is no account and no server. Everything is saved in your own browser.
 
 ## Features
 
-- Add income and expenses with an amount in QAR, a category, a date and an optional note. Edit or delete them later; a delete can be undone.
+- Add income and expenses with an amount in QAR, a category, a date and an optional note. The form starts on the category you used last for that type. Edit or delete entries later; saving or cancelling an edit takes you back to the row, and a delete can be undone.
 - A monthly view with income, spending and balance, how this month's spending compares with last month, and a bar chart of spending by category. Use the arrows to move between months.
 - A monthly budget per category with progress bars. A category close to its limit (80% or more) or over it gets a warning with an icon and text, not only a color.
 - A yearly total of the money you sent home, with a chart of each month and how much of the year's income it was. It adds up every expense in the "Money sent home" category for the year of the month on screen, so nothing extra needs entering, and a recurring transfer counts too.

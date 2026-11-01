@@ -11,6 +11,7 @@ export interface FormOptions {
   ctx: UiContext;
   editing: Transaction | null;
   defaultDate: string;
+  lastCategory: Partial<Record<Kind, string>>;
   onSubmit: (entry: EntryInput) => void;
   onCancel: () => void;
 }
@@ -72,7 +73,14 @@ export function kindToggle(ctx: UiContext, current: Kind, onChange: (kind: Kind)
   return segmented(ctx.t("kind"), "kind", kinds, current, onChange);
 }
 
-export function entryForm({ ctx, editing, defaultDate, onSubmit, onCancel }: FormOptions): HTMLElement {
+export function entryForm({
+  ctx,
+  editing,
+  defaultDate,
+  lastCategory,
+  onSubmit,
+  onCancel,
+}: FormOptions): HTMLElement {
   const { t } = ctx;
   let kind: Kind = editing?.kind ?? "expense";
 
@@ -103,7 +111,7 @@ export function entryForm({ ctx, editing, defaultDate, onSubmit, onCancel }: For
   });
   const error = h("p", { class: "form-error", id: "entry-error", hidden: true });
 
-  fillCategories(category, ctx, kind, editing?.category);
+  fillCategories(category, ctx, kind, editing?.category ?? lastCategory[kind]);
 
   function showError(message: string, input: HTMLInputElement): void {
     error.textContent = message;
@@ -135,7 +143,7 @@ export function entryForm({ ctx, editing, defaultDate, onSubmit, onCancel }: For
 
   const kinds = kindToggle(ctx, kind, (next) => {
     kind = next;
-    fillCategories(category, ctx, kind);
+    fillCategories(category, ctx, kind, lastCategory[kind]);
   });
 
   return h(
