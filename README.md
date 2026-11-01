@@ -10,14 +10,14 @@ There is no account and no server. Everything is saved in your own browser.
 
 ## Features
 
-- Add income and expenses with an amount in QAR, a category, a date and an optional note. Edit or delete them later; a delete can be undone.
+- Add income and expenses with an amount in QAR, a category, a date and an optional note. The form starts on the category you used last for that type. Edit or delete entries later; saving or cancelling an edit takes you back to the row, and a delete can be undone.
 - A monthly view with income, spending and balance, how this month's spending compares with last month, and a bar chart of spending by category. Use the arrows to move between months.
 - A monthly budget per category with progress bars. A category close to its limit (80% or more) or over it gets a warning with an icon and text, not only a color.
 - A yearly total of the money you sent home, with a chart of each month and how much of the year's income it was. It adds up every expense in the "Money sent home" category for the year of the month on screen, so nothing extra needs entering, and a recurring transfer counts too.
 - Recurring entries for things like rent, salary and bills, every month or every week. Entries that have fallen due are added when you open the app, including any missed while it was closed. Each one is a normal entry you can edit or delete, and a deleted one stays deleted. You can pause, edit or delete a schedule at any time. Pausing skips those dates; they are not added later when you resume. A schedule on the 31st uses the last day of shorter months and goes back to the 31st afterwards.
 - Installs on a phone or laptop and opens with no connection after your first visit.
 - Categories that fit life in Qatar, such as rent, money sent home, transport and fuel, and bills and phone.
-- English and Arabic, with a right-to-left layout for Arabic. Amounts are formatted with `Intl.NumberFormat` for `en-QA` and `ar-QA`, so the Arabic screen shows Arabic digits and ر.ق. Amount fields accept Arabic digits as well, so typing ١٢٥٫٥ works.
+- English and Arabic, with a right-to-left layout for Arabic. Amounts are formatted with `Intl.NumberFormat` for `en-QA` and `ar-QA`, so the Arabic screen shows Arabic digits and ر.ق. Amount fields accept Arabic digits as well, so typing ١٢٥٫٥ works, and a phone keypad's decimal comma: 45,50 is 45.50, while 1,250 stays one thousand two hundred and fifty. A comma that could mean either, such as 1,25.50, is refused rather than guessed.
 - Light and dark mode. It follows your system setting until you choose one.
 - Export a JSON backup or a CSV file, and import either one back. Importing skips entries you already have, so importing the same file twice does not create duplicates. JSON backups also hold budgets and recurring entries; CSV files hold entries only.
 - Data is stored in `localStorage` with a schema version. Data saved by an older version is upgraded when the app loads, and anything that cannot be read is copied to a backup key instead of being thrown away.
@@ -73,6 +73,14 @@ npm run check:offline
 
 This builds the app and runs it in headless Edge against a local server that behaves like GitHub Pages. It covers a first visit, no connection, a connection that never answers, a new deploy with the app open, a broken deploy, and a new deploy with the app closed. "No connection" means the server is really stopped. It needs Edge and Node 22 or newer, and it is separate from `npm test`. It has not been run on a real phone, so installing from a phone's browser is untested.
 
+To check phone use in a real browser:
+
+```bash
+npm run check:phone
+```
+
+This builds the app and uses it in headless Edge on a touch screen 390, 360 and 320 pixels wide, in English and Arabic, with real touch events and typed text. It covers amounts with a decimal comma, adding and editing entries, forms staying in view, buttons big enough for a finger, and no sideways scrolling. It needs the same things as the offline check and is also separate from `npm test`. A headless browser has no on-screen keyboard, so the check only confirms that the amount field does not take focus again after adding. The keyboard itself and the phone's own date and category pickers are untested.
+
 ## How offline use works
 
 `src/sw.ts` is a small service worker. `vite.config.ts` bundles it to `sw.js` and writes in the list of files in that build, with a version made from their contents, so a deploy that changes any file also changes `sw.js` and browsers notice.
@@ -107,7 +115,7 @@ src/ui     the views: form, list, charts, budgets, recurring entries, money sent
 src/main.ts
 src/sw.ts  the service worker
 public/    web app manifests in English and Arabic, and icons
-scripts/   the headless Edge offline check
+scripts/   the headless Edge offline and phone checks
 examples/  a sample CSV file
 ```
 

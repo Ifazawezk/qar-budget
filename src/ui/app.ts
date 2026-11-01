@@ -56,6 +56,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
   let report: ImportReport | null = null;
   let lastRecurringRun = today();
 
+  const touchQuery = window.matchMedia("(pointer: coarse)");
   const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
   darkQuery.addEventListener("change", () => {
     if (settings.theme === "auto") render();
@@ -118,10 +119,29 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     return posted > 0 ? `${text} ${ctx.t("posted", { count: ctx.count(posted) })}` : text;
   }
 
-  function focusAmount(): void {
-    const input = root.querySelector<HTMLInputElement>('input[name="amount"]');
-    input?.scrollIntoView({ block: "nearest" });
-    input?.focus({ preventScroll: true });
+  /**
+   * Bring a panel into view with its heading at the top, then put the cursor in `field`.
+   * Letting the browser scroll to the field instead can leave the heading off the screen.
+   */
+  function reveal(panelClass: string, field?: HTMLElement | null): void {
+    const panel = root.querySelector<HTMLElement>(panelClass);
+    const box = panel?.getBoundingClientRect();
+    if (box && (box.top < 0 || box.bottom > window.innerHeight)) {
+      panel?.scrollIntoView({ block: "start" });
+    }
+    field?.focus({ preventScroll: true });
+  }
+
+  function amountField(): HTMLInputElement | null {
+    return root.querySelector<HTMLInputElement>('.panel-form input[name="amount"]');
+  }
+
+  /** Go back to the row that was being edited, which can be a long way below the form. */
+  function returnToRow(id: string): void {
+    const rows = root.querySelectorAll<HTMLElement>(".panel-list .entry");
+    const row = [...rows].find((element) => element.dataset.id === id);
+    row?.scrollIntoView({ block: "center" });
+    row?.querySelector("button")?.focus({ preventScroll: true });
   }
 
   function submitEntry(entry: EntryInput): void {
@@ -131,20 +151,31 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     // Show the month the entry landed in, so it never seems to disappear.
     month = monthOf(tx.date);
     const saved = commit({ ...data, transactions: upsert(data.transactions, tx) });
+    if (!wasEditing) {
+      settings = {
+        ...settings,
+        lastCategory: { ...settings.lastCategory, [tx.kind]: tx.category },
+      };
+      storeSettings();
+    }
     render();
     if (saved) showNotice({ tone: "info", text: ctx.t(wasEditing ? "updated" : "added") });
-    focusAmount();
+    if (wasEditing) returnToRow(tx.id);
+    // On a phone this would bring the keyboard back over the confirmation.
+    else if (!touchQuery.matches) amountField()?.focus();
   }
 
   function startEdit(id: string): void {
     editingId = id;
     render();
-    focusAmount();
+    reveal(".panel-form", amountField());
   }
 
   function cancelEdit(): void {
+    const id = editingId;
     editingId = null;
     render();
+    if (id) returnToRow(id);
   }
 
   function deleteEntry(id: string): void {
@@ -172,18 +203,20 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     editingBudgets = false;
     const saved = commit({ ...data, budgets });
     render();
+    reveal(".panel-budgets");
     if (saved) showNotice({ tone: "info", text: ctx.t("budgetsSaved") });
   }
 
   function openRuleForm(next: string | "new"): void {
     editingRule = next;
     render();
-    root.querySelector<HTMLInputElement>(".rule-form input[name='amount']")?.focus();
+    reveal(".panel-recurring", root.querySelector<HTMLElement>(".rule-form input[name='amount']"));
   }
 
   function closeRuleForm(): void {
     editingRule = null;
     render();
+    reveal(".panel-recurring");
   }
 
   function saveRule(input: RuleInput): void {
@@ -193,6 +226,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     const saved = commit({ ...data, recurring: upsert(data.recurring, rule) });
     const posted = saved ? runRecurring() : 0;
     render();
+    reveal(".panel-recurring");
     if (saved) showNotice({ tone: "info", text: withPosted(ctx.t("ruleSaved"), posted) });
   }
 
@@ -279,14 +313,18 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
     return settings.theme === "dark" || (settings.theme === "auto" && darkQuery.matches);
   }
 
-  function updateSettings(next: Settings): void {
-    settings = next;
-    ctx = uiContext(settings.lang);
+  function storeSettings(): void {
     try {
       saveSettings(store, settings);
     } catch {
       // Preferences are a convenience; the page still works without saving them.
     }
+  }
+
+  function updateSettings(next: Settings): void {
+    settings = next;
+    ctx = uiContext(settings.lang);
+    storeSettings();
     render();
   }
 
@@ -391,6 +429,7 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
                 ctx,
                 editing,
                 defaultDate: defaultDate(),
+                lastCategory: settings.lastCategory,
                 onSubmit: submitEntry,
                 onCancel: cancelEdit,
               }),
@@ -437,11 +476,12 @@ export function startApp(root: HTMLElement, store: KeyValueStore, browserLang: L
                 onEdit: () => {
                   editingBudgets = true;
                   render();
-                  root.querySelector<HTMLInputElement>(".budget-form input")?.focus();
+                  reveal(".panel-budgets", root.querySelector<HTMLElement>(".budget-form input"));
                 },
                 onCancel: () => {
                   editingBudgets = false;
                   render();
+                  reveal(".panel-budgets");
                 },
                 onSave: saveBudgets,
               }),

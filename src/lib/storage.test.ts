@@ -84,17 +84,35 @@ describe("load and save", () => {
 describe("settings", () => {
   it("falls back to defaults for missing or unknown values", () => {
     const store = new MemoryStore();
-    expect(loadSettings(store)).toEqual({ theme: "auto", lang: "en" });
+    expect(loadSettings(store)).toEqual({ theme: "auto", lang: "en", lastCategory: {} });
     store.setItem(SETTINGS_KEY, '{"theme":"purple","lang":"fr"}');
-    expect(loadSettings(store)).toEqual({ theme: "auto", lang: "en" });
+    expect(loadSettings(store)).toEqual({ theme: "auto", lang: "en", lastCategory: {} });
     store.setItem(SETTINGS_KEY, "oops");
-    expect(loadSettings(store, "ar")).toEqual({ theme: "auto", lang: "ar" });
+    expect(loadSettings(store, "ar")).toEqual({ theme: "auto", lang: "ar", lastCategory: {} });
   });
 
   it("prefers the saved language over the browser language", () => {
     const store = new MemoryStore();
-    saveSettings(store, { theme: "dark", lang: "en" });
-    expect(loadSettings(store, "ar")).toEqual({ theme: "dark", lang: "en" });
+    saveSettings(store, { theme: "dark", lang: "en", lastCategory: {} });
+    expect(loadSettings(store, "ar")).toEqual({ theme: "dark", lang: "en", lastCategory: {} });
+  });
+
+  it("remembers the last category for each kind of entry", () => {
+    const store = new MemoryStore();
+    const lastCategory = { expense: "groceries", income: "freelance" };
+    saveSettings(store, { theme: "auto", lang: "en", lastCategory });
+    expect(loadSettings(store).lastCategory).toEqual(lastCategory);
+  });
+
+  it("drops a remembered category that does not belong to that kind", () => {
+    const store = new MemoryStore();
+    store.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ lastCategory: { expense: "salary", income: "freelance", other: "x" } }),
+    );
+    expect(loadSettings(store).lastCategory).toEqual({ income: "freelance" });
+    store.setItem(SETTINGS_KEY, '{"lastCategory":"groceries"}');
+    expect(loadSettings(store).lastCategory).toEqual({});
   });
 });
 

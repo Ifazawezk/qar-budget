@@ -1,3 +1,4 @@
+import { categoriesFor } from "./categories";
 import { isValidDate } from "./dates";
 import type { Lang } from "./i18n";
 import type { AppData, Budgets, Kind, RecurringRule, Transaction } from "./types";
@@ -175,6 +176,16 @@ export type Theme = "auto" | "light" | "dark";
 export interface Settings {
   theme: Theme;
   lang: Lang;
+  /** The category each kind of entry used last, so the next one starts there. */
+  lastCategory: Partial<Record<Kind, string>>;
+}
+
+function readLastCategory(raw: unknown): Settings["lastCategory"] {
+  if (!isRecord(raw)) return {};
+  const known = (["expense", "income"] as const).filter((kind) =>
+    categoriesFor(kind).some((category) => category.id === raw[kind]),
+  );
+  return Object.fromEntries(known.map((kind) => [kind, raw[kind]]));
 }
 
 /** `fallbackLang` is used until the user picks a language, usually the browser's. */
@@ -188,7 +199,7 @@ export function loadSettings(store: KeyValueStore, fallbackLang: Lang = "en"): S
   const saved = isRecord(raw) ? raw : {};
   const theme = saved.theme === "light" || saved.theme === "dark" ? saved.theme : "auto";
   const lang = saved.lang === "en" || saved.lang === "ar" ? saved.lang : fallbackLang;
-  return { theme, lang };
+  return { theme, lang, lastCategory: readLastCategory(saved.lastCategory) };
 }
 
 export function saveSettings(store: KeyValueStore, settings: Settings): void {

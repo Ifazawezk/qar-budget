@@ -21,7 +21,7 @@ function entryRow(tx: Transaction, o: ListOptions): HTMLElement {
   const label = `${name}, ${signed}`;
   return h(
     "li",
-    { class: tx.id === o.editingId ? "entry is-editing" : "entry" },
+    { class: tx.id === o.editingId ? "entry is-editing" : "entry", "data-id": tx.id },
     h(
       "div",
       { class: "entry-text" },
