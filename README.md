@@ -73,6 +73,14 @@ npm run check:offline
 
 This builds the app and runs it in headless Edge against a local server that behaves like GitHub Pages. It covers a first visit, no connection, a connection that never answers, a new deploy with the app open, a broken deploy, and a new deploy with the app closed. "No connection" means the server is really stopped. It needs Edge and Node 22 or newer, and it is separate from `npm test`. It has not been run on a real phone, so installing from a phone's browser is untested.
 
+To check phone use in a real browser:
+
+```bash
+npm run check:phone
+```
+
+This builds the app and uses it in headless Edge on a touch screen 390, 360 and 320 pixels wide, in English and Arabic, with real touch events and typed text. It covers amounts with a decimal comma, adding and editing entries, forms staying in view, buttons big enough for a finger, and no sideways scrolling. It needs the same things as the offline check and is also separate from `npm test`. A headless browser has no on-screen keyboard, so the check only confirms that the amount field does not take focus again after adding. The keyboard itself and the phone's own date and category pickers are untested.
+
 ## How offline use works
 
 `src/sw.ts` is a small service worker. `vite.config.ts` bundles it to `sw.js` and writes in the list of files in that build, with a version made from their contents, so a deploy that changes any file also changes `sw.js` and browsers notice.
@@ -107,7 +115,7 @@ src/ui     the views: form, list, charts, budgets, recurring entries, money sent
 src/main.ts
 src/sw.ts  the service worker
 public/    web app manifests in English and Arabic, and icons
-scripts/   the headless Edge offline check
+scripts/   the headless Edge offline and phone checks
 examples/  a sample CSV file
 ```
 
