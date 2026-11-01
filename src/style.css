@@ -274,21 +274,39 @@ button {
 
 /* Month switcher and totals */
 
+/* The label takes what is left, so the row can never get wider than a phone screen.
+   On the smallest phones a long month wraps onto two lines instead. */
 .month-nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 4px;
 }
 
 .month-label {
-  min-width: 9.5em;
   margin: 0;
-  font-size: 1.3rem;
+  font-size: clamp(1.05rem, 4.8vw, 1.3rem);
+  line-height: 1.25;
   text-align: center;
 }
 
 .month-nav .btn-small {
-  margin-inline-start: auto;
+  margin-inline-start: 4px;
+  white-space: nowrap;
+}
+
+@media (min-width: 880px) {
+  .month-nav {
+    grid-template-columns: auto auto auto 1fr;
+  }
+
+  .month-label {
+    min-width: 9.5em;
+  }
+
+  .month-nav .btn-small {
+    justify-self: end;
+  }
 }
 
 .cards {
@@ -626,13 +644,17 @@ input[name="amount"] {
   font-weight: 500;
 }
 
+/* A phone row leaves little width, so a note gets two lines before it is cut. */
 .entry-note {
+  display: -webkit-box;
   overflow: hidden;
   color: var(--text-muted);
   font-size: 0.875rem;
+  overflow-wrap: anywhere;
   text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* Notes use dir="auto" so mixed scripts read correctly, but they should line up
@@ -704,6 +726,7 @@ input[name="amount"] {
 }
 
 .toast .icon-btn {
+  flex: none;
   color: inherit;
 }
 
@@ -984,5 +1007,23 @@ input[name="amount"] {
 @media (max-width: 380px) {
   .field-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* A finger needs more room than a mouse, above all on edit and delete, which sit side by side. */
+@media (pointer: coarse) {
+  .icon-btn,
+  .entry-actions .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .btn-small,
+  .budget-input input {
+    min-height: 44px;
+  }
+
+  .segment span {
+    padding-block: 10px;
   }
 }
